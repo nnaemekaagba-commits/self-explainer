@@ -1,0 +1,23 @@
+
+        console.log("Sending request to OpenAI API...");
+        let openaiResponse;
+        try {
+          openaiResponse = await fetch("https://api.openai.com/v1/chat/completions", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${openaiKey}`
+            },
+            body: JSON.stringify({
+              model: "gpt-4o",
+              messages: messages,
+              response_format: { type: "json_object" },
+              temperature: 0.3, // Lower temperature for more consistent results
+              seed: 12345, // Fixed seed for reproducibility
+              max_tokens: 14000 // Balanced to prevent truncation while keeping responses focused
+            })
+          });
+        } catch (fetchError) {
+          console.error("❌ OpenAI fetch error (network/connection issue):", fetchError);
+          throw fetchError; // Re-throw to be caught by outer try-catch
+        }
