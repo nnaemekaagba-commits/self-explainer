@@ -1,10 +1,11 @@
-import { ArrowLeft, UserPlus, Archive, Home, BarChart3, FileText, TrendingUp, CheckCircle, XCircle, MessageCircle, Clock, Trash2, ChevronDown, ChevronUp } from 'lucide-react';
+import { ArrowLeft, UserPlus, Archive, Home, BarChart3, FileText, TrendingUp, CheckCircle, XCircle, MessageCircle, Clock, Trash2, ChevronDown, ChevronUp, Users, Share2, Check } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { getActivities, Activity } from '../../services/archiveService';
 import { getAllActivityLogs, ActivityLog, clearAllActivityLogs } from '../../services/activityLogService';
 import { MathRenderer } from './MathRenderer';
-import * as colearnerChatService from '../../services/colearnerChatService';
 import type { CoLearnerChatSession } from '../../services/colearnerChatService';
+import * as colearnerChatService from '../../services/colearnerChatService';
+import { copyToClipboard } from '../../utils/clipboard';
 
 interface ArchiveScreenProps {
   onBack: () => void;
@@ -12,9 +13,10 @@ interface ArchiveScreenProps {
   onInviteClick?: () => void;
   onStudentWorkClick?: () => void;
   onActivityClick?: (activity: Activity) => void;
+  currentUserName?: string;
 }
 
-export const ArchiveScreen = ({ onBack, onHomeClick, onInviteClick, onStudentWorkClick, onActivityClick }: ArchiveScreenProps) => {
+export const ArchiveScreen = ({ onBack, onHomeClick, onInviteClick, onStudentWorkClick, onActivityClick, currentUserName = 'You' }: ArchiveScreenProps) => {
   const [activeTab, setActiveTab] = useState<'archive' | 'activity-log' | 'colearner-chats'>('archive');
   const [activities, setActivities] = useState<Activity[]>([]);
   const [activityLogs, setActivityLogs] = useState<ActivityLog[]>([]);
@@ -25,6 +27,8 @@ export const ArchiveScreen = ({ onBack, onHomeClick, onInviteClick, onStudentWor
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [clearing, setClearing] = useState(false);
   const [expandedAttempts, setExpandedAttempts] = useState<Set<string>>(new Set());
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; log: ActivityLog } | null>(null);
+  const [linkCopied, setLinkCopied] = useState(false);
 
   const toggleAttempt = (stepNumber: number, attemptNumber: number) => {
     const key = `${stepNumber}-${attemptNumber}`;
@@ -130,8 +134,92 @@ export const ArchiveScreen = ({ onBack, onHomeClick, onInviteClick, onStudentWor
     }
   };
 
+  const copyLinkToClipboard = async (log: ActivityLog) => {
+    const url = `${window.location.origin}/activity-log/${log.id}`;
+    try {
+      await copyToClipboard(url);
+      setLinkCopied(true);
+      setTimeout(() => setLinkCopied(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy link to clipboard:', err);
+      // Show manual copy dialog
+      prompt('Copy this link:', url);
+    }
+  };
+
+  const handleShareQuestion = async (log: ActivityLog) => {
+    console.log('🔗 Archive: handleShareQuestion called');
+    console.log('📝 Log question:', log.question);
+    console.log('🖼️ Log image URL:', log.imageUrl);
+    
+    try {
+      // Create a unique ID for this shared question
+      const sharedId = `shared_${Date.now()}`;
+      
+      console.log('🆔 Generated shared ID:', sharedId);
+      
+      // Store the question in localStorage
+      const sharedQuestion = {
+        id: sharedId,
+        question: log.question,
+        imageUrl: log.imageUrl,
+        sharedBy: currentUserName,
+        sharedAt: new Date().toLocaleString(),
+      };
+      
+      console.log('💾 Storing shared question:', sharedQuestion);
+      
+      // Store in a temporary location for the receiver
+      localStorage.setItem(`pending_share_${sharedId}`, JSON.stringify(sharedQuestion));
+      
+      // Generate shareable link with the question ID
+      const shareLink = `${window.location.origin}?s=${sharedId}`;
+      
+      console.log('🔗 Share link:', shareLink);
+      
+      await copyToClipboard(shareLink);
+      setLinkCopied(true);
+      setContextMenu(null);
+      console.log('✅ Share link copied successfully from Archive!');
+      
+      // Reset after 2 seconds
+      setTimeout(() => setLinkCopied(false), 2000);
+    } catch (error) {
+      console.error('❌ Failed to create share link:', error);
+      alert(`Failed to create share link: ${error.message}`);
+    }
+  };
+
+  const handleContextMenu = (e: React.MouseEvent, log: ActivityLog) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    // Calculate position (adjust if too close to screen edges)
+    const x = e.clientX;
+    const y = e.clientY;
+    
+    setContextMenu({ x, y, log });
+  };
+
+  // Close context menu when clicking outside
+  useEffect(() => {
+    const handleClick = () => setContextMenu(null);
+    if (contextMenu) {
+      document.addEventListener('click', handleClick);
+      return () => document.removeEventListener('click', handleClick);
+    }
+  }, [contextMenu]);
+
   return (
     <div className="h-full bg-white flex flex-col">
+      {/* Toast Notification */}
+      {linkCopied && (
+        <div className="absolute top-20 left-1/2 transform -translate-x-1/2 bg-green-600 text-white px-6 py-3 rounded-lg shadow-lg z-50 flex items-center gap-2">
+          <Check size={20} />
+          <span className="font-semibold">Share link copied!</span>
+        </div>
+      )}
+      
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
         <div className="flex items-center gap-3">
@@ -278,11 +366,17 @@ export const ArchiveScreen = ({ onBack, onHomeClick, onInviteClick, onStudentWor
                     key={log.id}
                     onClick={() => setSelectedLog(log)}
                     className="w-full text-left bg-white border border-gray-200 rounded-lg p-3 hover:border-purple-300 hover:shadow-sm transition-all"
+                    onContextMenu={(e) => handleContextMenu(e, log)}
                   >
                     {/* Question */}
-                    <p className="text-[12px] font-semibold text-gray-900 mb-2">
-                      {log.question}
-                    </p>
+                    <div className="flex items-start gap-2 mb-2">
+                      {log.isShared && (
+                        <Users size={14} className="text-purple-600 flex-shrink-0 mt-0.5" />
+                      )}
+                      <p className="text-[12px] font-semibold text-gray-900 flex-1">
+                        {log.question}
+                      </p>
+                    </div>
 
                     {/* Stats Row */}
                     <div className="grid grid-cols-4 gap-2 mb-2">
@@ -766,6 +860,29 @@ export const ArchiveScreen = ({ onBack, onHomeClick, onInviteClick, onStudentWor
           </>
         )}
       </div>
+
+      {/* Context Menu */}
+      {contextMenu && (
+        <div
+          className="absolute bg-white border border-gray-200 rounded-lg shadow-md z-50"
+          style={{ left: contextMenu.x, top: contextMenu.y }}
+        >
+          <button
+            onClick={() => copyLinkToClipboard(contextMenu.log)}
+            className="w-full text-left px-4 py-2 hover:bg-gray-100"
+          >
+            <MessageCircle size={16} className="mr-2 inline-block" />
+            Copy Link
+          </button>
+          <button
+            onClick={() => handleShareQuestion(contextMenu.log)}
+            className="w-full text-left px-4 py-2 hover:bg-gray-100"
+          >
+            <Share2 size={16} className="mr-2 inline-block" />
+            Share Question
+          </button>
+        </div>
+      )}
     </div>
   );
 };

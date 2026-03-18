@@ -1,6 +1,8 @@
-import { ArrowLeft, UserPlus, Archive, Copy, Share2, Home, Check } from 'lucide-react';
+import { ArrowLeft, Copy, Share, Check, Users, Link as LinkIcon } from 'lucide-react';
 import { useState, useEffect } from 'react';
-import { generateInviteCode } from '../../services/inviteService';
+import { StatusBar } from './StatusBar';
+import { HomeIndicator } from './HomeIndicator';
+import { copyToClipboard } from '../../utils/clipboard';
 
 interface InviteFriendScreenProps {
   onBack: () => void;
@@ -56,12 +58,14 @@ export const InviteFriendScreen = ({ onBack, onHomeClick, onArchiveClick, invite
 
   const handleCopyLink = async () => {
     try {
-      await navigator.clipboard.writeText(inviteLink);
+      await copyToClipboard(inviteLink);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
       console.log('✅ Invite link copied to clipboard:', inviteLink);
     } catch (error) {
       console.error('Failed to copy link:', error);
+      // Show manual copy dialog
+      prompt('Copy this invite link:', inviteLink);
     }
   };
 
@@ -91,12 +95,12 @@ export const InviteFriendScreen = ({ onBack, onHomeClick, onArchiveClick, invite
           <button onClick={onBack} className="p-1">
             <ArrowLeft size={24} className="text-gray-900" />
           </button>
-          <UserPlus size={20} className="text-blue-600" />
+          <Users size={20} className="text-blue-600" />
         </div>
         <h1 className="text-[18px] font-semibold text-gray-900">Invite Friends</h1>
         <div className="flex items-center gap-3">
           <button onClick={onHomeClick} className="p-1">
-            <Home size={20} className="text-gray-700" />
+            <HomeIndicator size={20} className="text-gray-700" />
           </button>
           <button onClick={onArchiveClick} className="p-1">
             <Archive size={20} className="text-gray-700" />
@@ -108,7 +112,7 @@ export const InviteFriendScreen = ({ onBack, onHomeClick, onArchiveClick, invite
       <div className="flex-1 flex flex-col items-center justify-center px-6 py-8 pb-12">
         {/* Icon */}
         <div className="w-24 h-24 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center mb-6">
-          <UserPlus size={48} className="text-white" strokeWidth={2} />
+          <Users size={48} className="text-white" strokeWidth={2} />
         </div>
 
         {/* Title */}
@@ -152,7 +156,7 @@ export const InviteFriendScreen = ({ onBack, onHomeClick, onArchiveClick, invite
             onClick={handleShare}
             className="w-full bg-white border border-gray-300 text-gray-900 py-3 px-4 rounded-xl font-medium text-[15px] flex items-center justify-center gap-2 hover:bg-gray-50 active:bg-gray-100 transition-colors"
           >
-            <Share2 size={18} />
+            <Share size={18} />
             Share
           </button>
         </div>

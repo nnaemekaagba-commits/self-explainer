@@ -1,4 +1,4 @@
-import { UserPlus, Archive, User, Menu, Home } from 'lucide-react';
+import { UserPlus, Archive, User, Menu, Home, Users } from 'lucide-react';
 import { useState } from 'react';
 
 interface ScreenNavigationProps {
@@ -6,6 +6,7 @@ interface ScreenNavigationProps {
   onInviteClick?: () => void;
   onProfileClick?: () => void;
   onHomeClick?: () => void;
+  onSharedExerciseClick?: () => void;
   showProfileIcon?: boolean;
   showHomeIcon?: boolean;
 }
@@ -15,6 +16,7 @@ export function ScreenNavigation({
   onInviteClick, 
   onProfileClick, 
   onHomeClick,
+  onSharedExerciseClick,
   showProfileIcon = false,
   showHomeIcon = false
 }: ScreenNavigationProps) {
@@ -65,6 +67,16 @@ export function ScreenNavigation({
               >
                 <Archive size={20} className="text-gray-700" strokeWidth={2} />
                 <span className="text-[15px] font-medium text-gray-900">Archive</span>
+              </button>
+              <button
+                onClick={() => {
+                  setMenuOpen(false);
+                  onSharedExerciseClick?.();
+                }}
+                className="w-full px-4 py-3 flex items-center gap-3 hover:bg-gray-50 active:bg-gray-100 transition-colors text-left"
+              >
+                <Users size={20} className="text-gray-700" strokeWidth={2} />
+                <span className="text-[15px] font-medium text-gray-900">Shared Exercises</span>
               </button>
             </div>
           </>

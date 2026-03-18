@@ -7,6 +7,7 @@ import { validateAndFixLatex } from "./latex_fix.tsx";
 import { fixMissingSpaces } from "./text_fix.tsx";
 import { SCAFFOLDING_REQUIREMENTS, JSON_FORMAT_EXAMPLE, TOPIC_IDENTIFICATION_PROMPT, LATEX_NOTATION_REQUIREMENTS, CALCULATION_ENFORCEMENT_MESSAGE } from "./ai_prompts.tsx";
 import { SIMPLE_SYSTEM_PROMPT, SIMPLE_SYSTEM_PROMPT_WITH_VISION, SIMPLE_REMINDER } from "./simple_prompts.tsx";
+import { CORRECTNESS_MANDATE, LATEX_PROFESSIONAL_STANDARDS, VERIFICATION_PROTOCOL } from "./correctness_requirements.tsx";
 import { generateIntelligentFormula } from "./intelligent_formulas.tsx";
 import { IMAGE_EXTRACTION_PROMPT, IMAGE_WITH_TEXT_PROMPT } from "./vision_prompts.tsx";
 import { createClient } from "npm:@supabase/supabase-js@2";
@@ -270,8 +271,8 @@ app.post("/make-server-9063c65e/solve-problem", async (c) => {
             console.log("Processing image only - will extract BOTH complete text AND diagrams");
           }
           
-          // ADD SIMPLE REMINDER TO USER MESSAGE
-          userPrompt += `\n\n${SIMPLE_REMINDER}`;
+          // ADD CRITICAL REQUIREMENTS TO USER MESSAGE
+          userPrompt += `\n\n${CORRECTNESS_MANDATE}\n\n${LATEX_PROFESSIONAL_STANDARDS}\n\n${SIMPLE_REMINDER}\n\n${VERIFICATION_PROTOCOL}`;
           
           console.log("OCR Mode:", hasAdditionalText ? "Image + Text" : "Image Only");
           
@@ -296,7 +297,22 @@ app.post("/make-server-9063c65e/solve-problem", async (c) => {
                 },
                 {
                   type: "text",
-                  text: `CRITICAL REQUIREMENTS: 
+                  text: `🚨🚨🚨 CRITICAL 70/30 SCAFFOLDING REQUIREMENT 🚨🚨🚨
+
+THIS IS THE PRIMARY GOAL OF THE APPLICATION - NON-NEGOTIABLE:
+
+For EVERY SINGLE STEP:
+✓ YOU must DO 70% of the mathematical work (setup, substitute, calculate)
+✓ STUDENT completes the final 30% (simple arithmetic or final simplification)
+✗ NEVER give complete final answers
+✗ NEVER just give instructions
+
+EXAMPLE: If a step involves calculating force on 4 legs from 588N total:
+✓ CORRECT: "We have \\(4N = 588\\,\\text{N}\\)" then hint: "Divide 588 by 4. What is N?"
+✗ WRONG: "Each leg supports \\(N = 147\\,\\text{N}\\)" (complete answer - FORBIDDEN!)
+✗ WRONG: "Calculate the force on each leg" (just instructions - FORBIDDEN!)
+
+ADDITIONAL REQUIREMENTS:
 
 1. GENERATE ONLY 3-6 STEPS MAXIMUM - Keep concise to avoid response truncation!
 2. In your JSON response, EVERY step MUST have a non-empty 'formula' field with at least one equation in LaTeX format. 
@@ -325,7 +341,13 @@ MANDATORY LaTeX NOTATION RULES:
               role: "user",
               content: `Create a guided solution for this problem: ${question}
 
-${SIMPLE_REMINDER}`
+${CORRECTNESS_MANDATE}
+
+${LATEX_PROFESSIONAL_STANDARDS}
+
+${SIMPLE_REMINDER}
+
+${VERIFICATION_PROTOCOL}`
             }
           ];
         }
@@ -373,8 +395,8 @@ ${SIMPLE_REMINDER}`
           }
           console.log("Raw OpenAI content length:", rawContent?.length || 0);
           console.log("Finish reason:", finishReason);
-          console.log("Content preview (first 500 chars):", rawContent?.substring(0, 500));
-          console.log("Content end (last 500 chars):", rawContent?.substring(Math.max(0, (rawContent?.length || 0) - 500)));
+          console.log("Content preview (first 500 chars):", rawContent?.substring(0, 500) || '(no content)');
+          console.log("Content end (last 500 chars):", rawContent?.substring(Math.max(0, (rawContent?.length || 0) - 500)) || '(no content)');
           
           if (finishReason === 'length') {
             console.warn("WARNING: Response was truncated due to max_tokens limit!");
@@ -408,7 +430,7 @@ ${SIMPLE_REMINDER}`
               
               // Find the position of the error
               const errorMatch = parseError.message.match(/position (\d+)/);
-              if (errorMatch) {
+              if (errorMatch && rawContent) {
                 const errorPos = parseInt(errorMatch[1]);
                 console.log(`Error at position ${errorPos}, content length: ${rawContent.length}`);
                 
@@ -494,11 +516,11 @@ ${SIMPLE_REMINDER}`
               }
             } catch (secondError) {
               console.error("JSON repair failed:", secondError.message);
-              console.error("Content length:", rawContent.length);
-              console.error("Repaired content length:", repairedContent.length);
-              console.error("First 1000 chars:", rawContent.substring(0, 1000));
-              console.error("Last 1000 chars:", rawContent.substring(Math.max(0, rawContent.length - 1000)));
-              console.error("Repaired last 500 chars:", repairedContent.substring(Math.max(0, repairedContent.length - 500)));
+              console.error("Content length:", rawContent?.length || 0);
+              console.error("Repaired content length:", repairedContent?.length || 0);
+              console.error("First 1000 chars:", rawContent?.substring(0, 1000) || '(no content)');
+              console.error("Last 1000 chars:", rawContent?.substring(Math.max(0, (rawContent?.length || 0) - 1000)) || '(no content)');
+              console.error("Repaired last 500 chars:", repairedContent?.substring(Math.max(0, (repairedContent?.length || 0) - 500)) || '(no content)');
               throw new Error(`Failed to parse OpenAI response as JSON even after repair attempt: ${parseError.message}`);
             }
           }
@@ -522,18 +544,18 @@ ${SIMPLE_REMINDER}`
           }
           
           console.log("🔧 Unescaping LaTeX backslashes...");
-          console.log("BEFORE unescape:", JSON.stringify(parsed.strategy).substring(0, 200));
+          console.log("BEFORE unescape:", JSON.stringify(parsed.strategy || '').substring(0, 200));
           parsed = unescapeLatexInObject(parsed);
-          console.log("AFTER unescape:", JSON.stringify(parsed.strategy).substring(0, 200));
+          console.log("AFTER unescape:", JSON.stringify(parsed.strategy || '').substring(0, 200));
           
           // FIX PROFESSIONAL MATHEMATICAL NOTATION (convert plain text symbols to LaTeX)
           console.log("Applying professional formula notation fixes...");
           
           // DEBUG: Log raw AI output before any fixes
-          console.log("🔍 DEBUG - Raw AI strategy output:", JSON.stringify(parsed.strategy).substring(0, 300));
+          console.log("🔍 DEBUG - Raw AI strategy output:", JSON.stringify(parsed.strategy || '').substring(0, 300));
           if (parsed.steps && parsed.steps[0]) {
-            console.log("🔍 DEBUG - Raw first step title:", JSON.stringify(parsed.steps[0].title).substring(0, 200));
-            console.log("🔍 DEBUG - Raw first step description:", JSON.stringify(parsed.steps[0].description).substring(0, 200));
+            console.log("🔍 DEBUG - Raw first step title:", JSON.stringify(parsed.steps[0].title || '').substring(0, 200));
+            console.log("🔍 DEBUG - Raw first step description:", JSON.stringify(parsed.steps[0].description || '').substring(0, 200));
           }
           
           parsed = fixAllFormulas(parsed);
@@ -1633,6 +1655,60 @@ app.post("/make-server-9063c65e/activity-logs/:id/complete", async (c) => {
   }
 });
 
+// Mark activity as shared (when someone opens a shared link)
+app.post("/make-server-9063c65e/activity-logs/:id/mark-shared", async (c) => {
+  try {
+    const activityLogId = c.req.param("id");
+    const sessionId = getSessionId(c);
+    const body = await c.req.json();
+    
+    console.log('[MARK AS SHARED] Endpoint called');
+    console.log('  Activity Log ID:', activityLogId);
+    console.log('  Session ID:', sessionId);
+    console.log('  Shared Session ID:', body.sharedSessionId);
+    
+    // Get the original activity log (from the sharer's session)
+    const originalLog = await kv.get(activityLogId);
+    if (!originalLog) {
+      console.log('[MARK AS SHARED] Original activity log not found');
+      return c.json({ error: "Activity log not found" }, 404);
+    }
+
+    console.log('[MARK AS SHARED] Original log found:', originalLog.question);
+    
+    // Create a copy for the current user's session with shared flags
+    const newLogId = getSessionKey(sessionId, `log:${Date.now()}`);
+    const sharedLog = {
+      ...originalLog,
+      id: newLogId,
+      isShared: true,
+      sharedSessionId: body.sharedSessionId || null,
+      // Reset progress for the new user
+      steps: originalLog.steps.map((step: any) => ({
+        ...step,
+        attempts: [],
+        completed: false,
+        correctAttemptNumber: undefined
+      })),
+      totalCorrectResponses: 0,
+      totalAttempts: 0,
+      totalAIQueriesUsed: 0,
+      status: 'in-progress',
+      startedAt: new Date().toISOString(),
+      completedAt: undefined
+    };
+
+    await kv.set(newLogId, sharedLog);
+    
+    console.log('[MARK AS SHARED] Shared log created with ID:', newLogId);
+    
+    return c.json({ success: true, id: newLogId });
+  } catch (error) {
+    console.error("Error marking activity as shared:", error);
+    return c.json({ error: "Failed to mark activity as shared" }, 500);
+  }
+});
+
 // Clear all activity logs
 app.delete("/make-server-9063c65e/activity-logs/clear-all", async (c) => {
   try {
@@ -1693,8 +1769,8 @@ app.post("/make-server-9063c65e/colearner-chats", async (c) => {
     const body = await c.req.json();
     const { participants, problemContext, activityLogId } = body;
     
-    if (!participants || participants.length < 2) {
-      return c.json({ error: "At least 2 participants required" }, 400);
+    if (!participants || participants.length < 1) {
+      return c.json({ error: "At least 1 participant required" }, 400);
     }
     
     const chatId = getSessionKey(sessionId, `colearner-chat:${Date.now()}`);

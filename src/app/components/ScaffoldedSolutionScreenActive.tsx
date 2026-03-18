@@ -116,11 +116,12 @@ export function ScaffoldedSolutionScreenActive({ onBack, onHomeClick, onArchiveC
                         </div>
                       )}
                       {step.formula && (
-                        <div className="mt-2 p-3 bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg border-2 border-purple-300 shadow-sm">
-                          <p className="text-[13px] text-purple-900 font-black mb-2 flex items-center gap-1" style={{ fontWeight: 900 }}>
-                            <span>📐</span> Key Formula:
+                        <div className="mt-2 p-5 bg-gradient-to-br from-purple-100 via-purple-50 to-blue-100 rounded-xl border-4 border-purple-600 shadow-xl formula-box">
+                          <p className="text-[15px] text-purple-900 font-black mb-4 flex items-center gap-2" style={{ fontWeight: 900 }}>
+                            <span className="text-2xl">📐</span> 
+                            <span className="uppercase tracking-widest">KEY FORMULA</span>
                           </p>
-                          <div className="text-[17px] font-bold" style={{ fontWeight: 800 }}>
+                          <div className="text-[23px] font-extrabold bg-white p-6 rounded-xl shadow-inner border-2 border-purple-300" style={{ fontWeight: 900 }}>
                             <MathRenderer content={step.formula} />
                           </div>
                         </div>

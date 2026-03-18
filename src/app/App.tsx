@@ -39,6 +39,7 @@ import { SignUpScreen } from './components/SignUpScreen';
 import { ForgotPasswordScreen } from './components/ForgotPasswordScreen';
 import { ResetPasswordScreen } from './components/ResetPasswordScreen';
 import { PasswordResetDebug } from './components/PasswordResetDebug';
+import { SharedExerciseScreen } from './components/SharedExerciseScreen';
 import { solveProblem, testConnection } from '../services/aiService';
 import { saveActivity } from '../services/archiveService';
 import { validateInviteCode } from '../services/inviteService';
@@ -69,8 +70,8 @@ export default function App() {
   
   const [mode, setMode] = useState<'overview' | 'prototype'>('prototype');
   const [fidelity, setFidelity] = useState<'high' | 'low'>('high');
-  const [currentScreen, setCurrentScreen] = useState<'login' | 'signup' | 'forgot-password' | 'reset-password' | 'home' | 'scaffolded' | 'scaffolded-active' | 'archive' | 'guided' | 'invite' | 'colearn' | 'feedback-correct' | 'feedback-wrong' | 'feedback-both-wrong' | 'feedback-partial' | 'profile' | 'self-explanation' | 'student-work' | 'practice'>('login');
-  const [screenHistory, setScreenHistory] = useState<Array<'login' | 'signup' | 'forgot-password' | 'reset-password' | 'home' | 'scaffolded' | 'scaffolded-active' | 'archive' | 'guided' | 'invite' | 'colearn' | 'feedback-correct' | 'feedback-wrong' | 'feedback-both-wrong' | 'feedback-partial' | 'profile' | 'self-explanation' | 'student-work' | 'practice'>>(['login']);
+  const [currentScreen, setCurrentScreen] = useState<'login' | 'signup' | 'forgot-password' | 'reset-password' | 'home' | 'scaffolded' | 'scaffolded-active' | 'archive' | 'guided' | 'invite' | 'colearn' | 'feedback-correct' | 'feedback-wrong' | 'feedback-both-wrong' | 'feedback-partial' | 'profile' | 'self-explanation' | 'student-work' | 'practice' | 'shared-exercise'>('login');
+  const [screenHistory, setScreenHistory] = useState<Array<'login' | 'signup' | 'forgot-password' | 'reset-password' | 'home' | 'scaffolded' | 'scaffolded-active' | 'archive' | 'guided' | 'invite' | 'colearn' | 'feedback-correct' | 'feedback-wrong' | 'feedback-both-wrong' | 'feedback-partial' | 'profile' | 'self-explanation' | 'student-work' | 'practice' | 'shared-exercise'>>(['login']);
   const [aiData, setAiData] = useState<any>(null);
   const [userQuestion, setUserQuestion] = useState<string>('');
   const [uploadedImageUrl, setUploadedImageUrl] = useState<string | null>(null);
@@ -290,6 +291,93 @@ export default function App() {
     }
   }, []);
 
+  // Check for shared activity link in URL
+  useEffect(() => {
+    if (!isAuthenticated || !currentUser) return;
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const sharedActivityId = urlParams.get('shared');
+    const sharedSessionId = urlParams.get('session');
+    
+    if (sharedActivityId) {
+      console.log('🔗 Shared activity detected:', sharedActivityId);
+      console.log('📌 Session ID:', sharedSessionId || 'none');
+      
+      // Import the shared activity to the current user's archive
+      import('../services/activityLogService').then(({ markActivityAsShared }) => {
+        if (markActivityAsShared) {
+          markActivityAsShared(sharedActivityId, sharedSessionId || undefined).then(() => {
+            console.log('✅ Shared activity added to your archive!');
+            
+            // Navigate to archive to show the shared activity
+            setMode('prototype');
+            setCurrentScreen('archive');
+            
+            // Show a notification (optional - using alert for now)
+            setTimeout(() => {
+              alert('📚 Shared question added to your archive! Look for the group icon 👥');
+            }, 500);
+          }).catch((error: any) => {
+            console.error('❌ Failed to add shared activity:', error);
+          });
+        }
+      });
+      
+      // Clean up the URL (remove the shared parameter)
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+  }, [isAuthenticated, currentUser]);
+
+  // Check for shared question link (s parameter)
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const sharedQuestionId = urlParams.get('s');
+    
+    if (sharedQuestionId) {
+      console.log('🔗 Shared question detected:', sharedQuestionId);
+      
+      // Retrieve the shared question from localStorage
+      const storedQuestion = localStorage.getItem(`pending_share_${sharedQuestionId}`);
+      
+      if (storedQuestion) {
+        try {
+          const sharedQuestion = JSON.parse(storedQuestion);
+          
+          // Get or create shared questions array for this user
+          const sessionId = getSessionId();
+          const stored = localStorage.getItem(`shared_questions_${sessionId}`) || '[]';
+          const sharedQuestions = JSON.parse(stored);
+          
+          // Check if question already added
+          const alreadyExists = sharedQuestions.some((q: any) => q.id === sharedQuestion.id);
+          
+          if (!alreadyExists) {
+            // Add to shared questions
+            sharedQuestions.push(sharedQuestion);
+            localStorage.setItem(`shared_questions_${sessionId}`, JSON.stringify(sharedQuestions));
+            
+            console.log('✅ Shared question added to your exercises!');
+            
+            // Navigate to shared exercise screen
+            setTimeout(() => {
+              setCurrentScreen('shared-exercise');
+              alert('📚 New shared question added! Check your Shared Exercises.');
+            }, 500);
+          } else {
+            console.log('ℹ️ Question already in your shared exercises');
+          }
+        } catch (error) {
+          console.error('❌ Error processing shared question:', error);
+        }
+      } else {
+        console.warn('⚠️ Shared question not found in localStorage');
+      }
+      
+      // Clean up the URL
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+  }, []);
+
   // Handle question correction submission
   const handleQuestionCorrection = async (correctedQuestion: string, file?: File) => {
     console.log('Question correction received:', correctedQuestion, file);
@@ -475,6 +563,8 @@ export default function App() {
                 onArchiveClick={() => setCurrentScreen('archive')}
                 onInviteClick={() => setCurrentScreen('invite')}
                 onProfileClick={() => setCurrentScreen('profile')}
+                onSharedExerciseClick={() => navigateToScreen('shared-exercise')}
+                currentUserName={currentUser?.email || 'You'}
                 onGenerateSolution={async () => {
                   // Get current input from MessageInput
                   const question = getCurrentInput?.() || '';
@@ -591,6 +681,7 @@ export default function App() {
                     setSavedStepAnswers(prev => ({ ...prev, [stepNumber]: answer }));
                     setSavedStepExplanations(prev => ({ ...prev, [stepNumber]: explanation }));
                   }}
+                  activityLogId={currentActivityLogId}
                   onStepAttempt={(stepNumber, userAnswer, userExplanation, answerCorrect, explanationCorrect, chatMessages, answerImageUrl, explanationImageUrl) => {
                     // Record step attempt in activity log with chat messages AND image URLs
                     if (currentActivityLogId) {
@@ -670,6 +761,7 @@ export default function App() {
                   onHomeClick={() => setCurrentScreen('home')}
                   onInviteClick={() => navigateToScreen('invite')}
                   onStudentWorkClick={() => navigateToScreen('student-work')}
+                  currentUserName={currentUser?.email || 'You'}
                   onActivityClick={(activity) => {
                     // Load the archived activity back into the guided solution screen
                     console.log('📂 Loading archived activity:', activity);
@@ -904,6 +996,22 @@ export default function App() {
                   originalQuestion={userQuestion}
                   originalAIData={aiData}
                   learningThreadId={currentLearningThreadId || undefined}
+                />
+                <HomeIndicator />
+              </>
+            ) : currentScreen === 'shared-exercise' ? (
+              <>
+                <StatusBar />
+                <SharedExerciseScreen
+                  onBack={navigateBack}
+                  onHomeClick={() => setCurrentScreen('home')}
+                  onArchiveClick={() => navigateToScreen('archive')}
+                  onStartQuestion={(question, imageUrl) => {
+                    setUserQuestion(question);
+                    setUploadedImageUrl(imageUrl || null);
+                    setCurrentScreen('home');
+                  }}
+                  sessionId={getSessionId()}
                 />
                 <HomeIndicator />
               </>

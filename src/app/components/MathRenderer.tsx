@@ -49,7 +49,8 @@ export function MathRenderer({ content, className }: MathRendererProps) {
                 displayMode: true, 
                 throwOnError: false,
                 trust: true,
-                strict: false
+                strict: false,
+                minRuleThickness: 0.08  // Thick fraction lines
               });
               container.appendChild(div);
             } catch (e) {
@@ -92,7 +93,8 @@ export function MathRenderer({ content, className }: MathRendererProps) {
                 displayMode: false, 
                 throwOnError: false,
                 trust: true,
-                strict: false
+                strict: false,
+                minRuleThickness: 0.08  // Thick fraction lines
               });
               container.appendChild(span);
             } catch (e) {
@@ -185,7 +187,8 @@ export function MathRenderer({ content, className }: MathRendererProps) {
                 displayMode: false, 
                 throwOnError: false,
                 trust: true,
-                strict: false
+                strict: false,
+                minRuleThickness: 0.08  // Thick fraction lines
               });
               container.appendChild(span);
             } catch (e) {
@@ -224,8 +227,6 @@ export function MathRenderer({ content, className }: MathRendererProps) {
     <div 
       ref={containerRef} 
       className={`math-content ${className || ''}`}
-    >
-      {content}
-    </div>
+    />
   );
 }

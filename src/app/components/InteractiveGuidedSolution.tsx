@@ -6,6 +6,7 @@ import { ScreenNavigation } from './ScreenNavigation';
 import { MessageInput } from './MessageInput';
 import { ActionButton } from './ActionButton';
 import { MathBackground } from './MathBackground';
+import { copyToClipboard } from '../../utils/clipboard';
 
 interface Step {
   stepNumber: number;
@@ -42,6 +43,8 @@ interface InteractiveGuidedSolutionProps {
   completedSteps?: Set<number>;
   onStepIndexChange?: (index: number) => void;
   onCompletedStepsChange?: (steps: Set<number>) => void;
+  // Activity log ID for sharing
+  activityLogId?: string;
 }
 
 export function InteractiveGuidedSolution({
@@ -64,6 +67,7 @@ export function InteractiveGuidedSolution({
   completedSteps: propCompletedSteps = new Set(),
   onStepIndexChange,
   onCompletedStepsChange,
+  activityLogId,
 }: InteractiveGuidedSolutionProps) {
   const [stepAnswers, setStepAnswers] = useState<Record<number, string>>(savedStepAnswers || {});
   const [stepExplanations, setStepExplanations] = useState<Record<number, string>>(savedStepExplanations || {});
@@ -95,6 +99,24 @@ export function InteractiveGuidedSolution({
         setUploadedAnswerImages({ ...uploadedAnswerImages, [stepNum]: reader.result as string });
       };
       reader.readAsDataURL(file);
+    }
+  };
+
+  // Function to copy share link
+  const handleCopyShareLink = async () => {
+    if (!activityLogId) {
+      alert('Cannot share: Activity not saved yet. Try solving a step first!');
+      return;
+    }
+
+    const shareLink = `${window.location.origin}?shared=${activityLogId}`;
+    
+    try {
+      await copyToClipboard(shareLink);
+      console.log('✅ Share link copied:', shareLink);
+    } catch (error) {
+      console.error('❌ Failed to copy link:', error);
+      alert('Failed to copy link. Please try again.');
     }
   };
 
@@ -279,11 +301,12 @@ export function InteractiveGuidedSolution({
 
           {/* Formula if exists */}
           {step.formula && (
-            <div className="p-4 bg-gradient-to-r from-purple-50 to-blue-50 border-2 border-purple-400 rounded-xl shadow-md">
-              <p className="text-[14px] text-purple-900 font-black mb-3 flex items-center gap-1.5" style={{ fontWeight: 900 }}>
-                <span className="text-lg">📐</span> Key Formula:
+            <div className="p-6 bg-gradient-to-br from-purple-100 via-purple-50 to-blue-100 border-4 border-purple-600 rounded-2xl shadow-xl formula-box">
+              <p className="text-[16px] text-purple-900 font-black mb-5 flex items-center gap-2.5" style={{ fontWeight: 900 }}>
+                <span className="text-3xl">📐</span> 
+                <span className="uppercase tracking-widest">KEY FORMULA</span>
               </p>
-              <div className="text-[17px] text-gray-900 font-bold bg-white/70 p-4 rounded-lg" style={{ fontWeight: 800 }}>
+              <div className="text-[24px] text-gray-900 font-extrabold bg-white p-7 rounded-2xl shadow-inner border-2 border-purple-300" style={{ fontWeight: 900 }}>
                 <MathRenderer content={step.formula} />
               </div>
             </div>
@@ -485,7 +508,7 @@ export function InteractiveGuidedSolution({
           <span className="text-[15px] font-medium">Back</span>
         </button>
         <span className="text-[15px] font-medium text-gray-900">Guided Solution</span>
-        <div className="w-16"></div>
+        <div className="w-[80px]"></div>
       </div>
 
       {/* Content area */}

@@ -143,7 +143,7 @@ function generatePartialSolution(question: string): {
         },
         {
           title: "Apply Power Rule to Each Term",
-          description: "For each term axⁿ, the derivative is n·axⁿ⁻¹. Constants become 0.",
+          description: "For each term axⁿ, the derivative is n·axⁿ���¹. Constants become 0.",
           formula: "d/dx(xⁿ) = n·xⁿ⁻¹"
         },
         {
@@ -316,6 +316,7 @@ export async function solveProblem(question: string, imageUrl?: string, apiProvi
     console.log('🔗 Image URL prefix:', imageUrl.substring(0, 100) + '...');
   }
   console.log('🌐 API URL:', `${API_BASE_URL}/solve-problem`);
+  console.log('🔑 Using auth key (first 20 chars):', publicAnonKey.substring(0, 20) + '...');
   console.log('================================');
 
   try {
@@ -327,6 +328,9 @@ export async function solveProblem(question: string, imageUrl?: string, apiProvi
       apiProvider: apiProvider || 'default'
     }));
     
+    console.log('⏳ Starting fetch request...');
+    const fetchStartTime = Date.now();
+    
     const response = await fetch(`${API_BASE_URL}/solve-problem`, {
       method: 'POST',
       headers: {
@@ -336,7 +340,11 @@ export async function solveProblem(question: string, imageUrl?: string, apiProvi
       body: JSON.stringify(requestBody)
     });
 
+    const fetchDuration = Date.now() - fetchStartTime;
+    console.log(`✅ Fetch completed in ${fetchDuration}ms`);
     console.log('📡 Backend response status:', response.status);
+    console.log('📡 Backend response statusText:', response.statusText);
+    console.log('📡 Backend response ok:', response.ok);
 
     if (!response.ok) {
       const errorText = await response.text();
@@ -350,26 +358,47 @@ export async function solveProblem(question: string, imageUrl?: string, apiProvi
         if (errorData.debugInfo) {
           console.error('🔍 OpenAI Error:', errorData.debugInfo.openaiError);
         }
+        
+        throw new Error(`Backend returned ${response.status}: ${errorData.error || errorText}`);
       } catch (e) {
         // Error text is not JSON
+        throw new Error(`Backend returned ${response.status}: ${errorText}`);
       }
-      
-      throw new Error(`Backend error: ${errorText}`);
     }
 
     const responseText = await response.text();
-    console.log('Backend response:', responseText);
+    console.log('✅ Response received, length:', responseText.length);
+    console.log('📄 Response preview:', responseText.substring(0, 200) + '...');
 
     try {
-      return JSON.parse(responseText);
+      const parsedResponse = JSON.parse(responseText);
+      console.log('✅ Successfully parsed JSON response');
+      console.log('📊 Response has steps:', parsedResponse.steps?.length || 0);
+      return parsedResponse;
     } catch (parseError) {
-      console.error('Failed to parse JSON response:', responseText);
-      console.warn('Backend returned invalid JSON, falling back to demo mode');
+      console.error('❌ Failed to parse JSON response:', parseError);
+      console.error('📄 Full response text:', responseText);
+      console.warn('⚠️  Backend returned invalid JSON, falling back to demo mode');
       return getDemoSolution(question, imageUrl);
     }
   } catch (error) {
-    console.error('Error solving problem:', error);
-    console.warn('Backend error, falling back to demo mode');
+    console.error('❌ Error solving problem:', error);
+    console.error('❌ Error type:', error.constructor.name);
+    console.error('❌ Error message:', error.message);
+    console.error('❌ Error stack:', error.stack);
+    
+    // Check if it's a network error
+    if (error instanceof TypeError && error.message.includes('fetch')) {
+      console.error('🌐 NETWORK ERROR: Cannot reach the backend server');
+      console.error('   Possible causes:');
+      console.error('   1. Edge function not deployed');
+      console.error('   2. Edge function has errors and crashed');
+      console.error('   3. Network connectivity issue');
+      console.error('   4. CORS policy blocking the request');
+      console.error('   💡 Check Supabase Dashboard > Edge Functions for deployment status');
+    }
+    
+    console.warn('⚠️  Backend error, falling back to demo mode');
     return getDemoSolution(question, imageUrl);
   }
 }

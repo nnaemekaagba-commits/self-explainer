@@ -1,13 +1,13 @@
 import { StatusBar } from './StatusBar';
 import { TopActions } from './TopActions';
 import { MessageInput } from './MessageInput';
+import { Share2, Info, Check } from 'lucide-react';
+import { useState } from 'react';
+import { copyToClipboard } from '../../utils/clipboard';
+import { MathBackground } from './MathBackground';
 import { ActionButton } from './ActionButton';
 import { HomeIndicator } from './HomeIndicator';
-import { MathBackground } from './MathBackground';
-import { AppIcon } from './AppIcon';
 import { SelfExplanationModal } from './SelfExplanationModal';
-import { Info } from 'lucide-react';
-import { useState } from 'react';
 
 interface HomeScreenProps {
   config: {
@@ -24,12 +24,14 @@ interface HomeScreenProps {
   onArchiveClick: () => void;
   onInviteClick: () => void;
   onProfileClick: () => void;
+  onSharedExerciseClick?: () => void;
   onGenerateSolution: () => Promise<void>;
   onQuestionSubmit: (question: string, imageUrl: string | null) => void;
   onGetCurrentInput: (getter: () => string) => void;
   isGeneratingSolution: boolean;
   getCurrentInput: (() => string) | null;
   uploadedImageUrl: string | null;
+  currentUserName?: string;
 }
 
 export function HomeScreen({
@@ -37,14 +39,78 @@ export function HomeScreen({
   onArchiveClick,
   onInviteClick,
   onProfileClick,
+  onSharedExerciseClick,
   onGenerateSolution,
   onQuestionSubmit,
   onGetCurrentInput,
   isGeneratingSolution,
   getCurrentInput,
   uploadedImageUrl,
+  currentUserName = 'You',
 }: HomeScreenProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [linkCopied, setLinkCopied] = useState(false);
+
+  const handleShareQuestion = async () => {
+    console.log('🔗 handleShareQuestion called');
+    console.log('📝 getCurrentInput function:', getCurrentInput);
+    
+    const question = getCurrentInput?.() || '';
+    
+    console.log('❓ Question value:', question);
+    console.log('🖼️ Uploaded image URL:', uploadedImageUrl);
+    
+    if (!question.trim() && !uploadedImageUrl) {
+      alert('Please type a question or upload an image before sharing!');
+      return;
+    }
+
+    try {
+      // Create a unique ID for this shared question
+      const sharedId = `shared_${Date.now()}`;
+      
+      console.log('🆔 Generated shared ID:', sharedId);
+      
+      // Store the question in localStorage
+      const sharedQuestion = {
+        id: sharedId,
+        question,
+        imageUrl: uploadedImageUrl,
+        sharedBy: currentUserName,
+        sharedAt: new Date().toLocaleString(),
+      };
+      
+      console.log('💾 Storing shared question:', sharedQuestion);
+      
+      // Store in a temporary location for the receiver
+      localStorage.setItem(`pending_share_${sharedId}`, JSON.stringify(sharedQuestion));
+      
+      // Generate shareable link with the question ID
+      const shareLink = `${window.location.origin}?s=${sharedId}`;
+      
+      console.log('🔗 Share link:', shareLink);
+      
+      // Use the helper function with fallback
+      await copyToClipboard(shareLink);
+      setLinkCopied(true);
+      console.log('✅ Share link copied successfully!');
+      
+      // Reset after 2 seconds
+      setTimeout(() => setLinkCopied(false), 2000);
+    } catch (error) {
+      console.error('❌ Failed to create share link:', error);
+      
+      // If copy failed, show the link in an alert so user can copy manually
+      const shareLink = `${window.location.origin}?s=${error.sharedId || 'error'}`;
+      const userWantsToCopy = window.confirm(
+        `Share link created but couldn't copy automatically.\n\nClick OK to see the link and copy it manually.`
+      );
+      
+      if (userWantsToCopy) {
+        prompt('Copy this share link:', shareLink);
+      }
+    }
+  };
 
   return (
     <>
@@ -53,6 +119,7 @@ export function HomeScreen({
         onArchiveClick={onArchiveClick}
         onInviteClick={onInviteClick}
         onProfileClick={onProfileClick}
+        onSharedExerciseClick={onSharedExerciseClick}
       />
 
       {/* Main content area */}
@@ -109,6 +176,24 @@ export function HomeScreen({
             >
               <Info className="w-5 h-5 group-hover:scale-110 transition-transform" />
               What is self-explanation and why does it help learning?
+            </button>
+            
+            {/* Share Button */}
+            <button
+              onClick={handleShareQuestion}
+              className="w-full py-4 inline-flex items-center justify-center gap-3 text-base text-white bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 font-semibold transition-all rounded-xl border-2 border-purple-600 hover:border-purple-700 group shadow-md hover:shadow-lg"
+            >
+              {linkCopied ? (
+                <>
+                  <Check className="w-5 h-5" />
+                  Link Copied!
+                </>
+              ) : (
+                <>
+                  <Share2 className="w-5 h-5 group-hover:scale-110 transition-transform" />
+                  Share Question with Friend
+                </>
+              )}
             </button>
           </div>
         </div>

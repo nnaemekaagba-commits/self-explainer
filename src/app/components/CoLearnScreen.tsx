@@ -1,6 +1,7 @@
-import { ArrowLeft, UserPlus, Archive, User, MessageCircle, ThumbsUp, Home } from 'lucide-react';
+import { ArrowLeft, UserPlus, Archive, User, MessageCircle, ThumbsUp, Home, Share2, Copy, Check } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import * as colearnerChatService from '../../services/colearnerChatService';
+import { copyToClipboard } from '../../utils/clipboard';
 
 interface CoLearnScreenProps {
   onBack: () => void;
@@ -23,6 +24,14 @@ export const CoLearnScreen = ({
 }: CoLearnScreenProps) => {
   const [chatSessionId, setChatSessionId] = useState<string | null>(null);
   const [isInitializing, setIsInitializing] = useState(false);
+  const [userAnswer, setUserAnswer] = useState('');
+  const [userExplanation, setUserExplanation] = useState('');
+  const [hasShared, setHasShared] = useState(false);
+  const [isSharing, setIsSharing] = useState(false);
+  const [showChat, setShowChat] = useState(false);
+  const [chatMessages, setChatMessages] = useState<Array<{sender: string; message: string; timestamp: string}>>([]);
+  const [newChatMessage, setNewChatMessage] = useState('');
+  const [linkCopied, setLinkCopied] = useState(false);
 
   // Initialize chat session when component mounts
   useEffect(() => {
@@ -33,8 +42,8 @@ export const CoLearnScreen = ({
       try {
         console.log('🔵 Initializing co-learner chat session...');
         
-        // Create a new chat session with mock participants
-        const participants = [currentUserName, "Obi E.", "Agu C.", "Jordan T."];
+        // Create a new chat session with current user only
+        const participants = [currentUserName];
         const { chatId, session } = await colearnerChatService.createChatSession(
           participants,
           problemContext || "Step 2: Plan your approach and method",
@@ -43,30 +52,6 @@ export const CoLearnScreen = ({
         
         setChatSessionId(chatId);
         console.log('✅ Co-learner chat session created:', chatId);
-        
-        // Log initial mock messages to the backend
-        await colearnerChatService.addMessage(
-          chatId,
-          "Obi E.",
-          "I solved this by isolating the variable. First, I added 3 to both sides, then divided by 2.",
-          "text"
-        );
-        
-        await colearnerChatService.addMessage(
-          chatId,
-          "Agu C.",
-          "Used the distributive property to simplify, then combined like terms before solving for x.",
-          "text"
-        );
-        
-        await colearnerChatService.addMessage(
-          chatId,
-          "Jordan T.",
-          "I approached it differently by factoring first, which made it easier to see the solution.",
-          "text"
-        );
-        
-        console.log('✅ Initial messages logged to backend');
       } catch (error) {
         console.error('❌ Error initializing co-learner chat session:', error);
       } finally {
@@ -78,55 +63,78 @@ export const CoLearnScreen = ({
   }, [chatSessionId, isInitializing, problemContext, activityLogId, currentUserName]);
 
   // Function to log user's response when they share
-  const handleShareResponse = async (answer: string, explanation: string) => {
+  const handleShareResponse = async () => {
     if (!chatSessionId) {
       console.error('❌ No chat session ID - cannot log message');
       return;
     }
     
+    setIsSharing(true);
     try {
       await colearnerChatService.addMessage(
         chatSessionId,
         currentUserName,
-        `Answer: ${answer}\nExplanation: ${explanation}`,
+        `Answer: ${userAnswer}\\nExplanation: ${userExplanation}`,
         "text"
       );
       console.log('✅ User response logged to backend');
+      setHasShared(true);
     } catch (error) {
       console.error('❌ Error logging user response:', error);
+    } finally {
+      setIsSharing(false);
+    }
+  };
+
+  // Function to send chat message
+  const handleSendChatMessage = async () => {
+    if (!newChatMessage.trim() || !chatSessionId) return;
+
+    const newMessage = {
+      sender: currentUserName,
+      message: newChatMessage,
+      timestamp: "Just now"
+    };
+
+    setChatMessages([...chatMessages, newMessage]);
+    
+    // Log to backend
+    try {
+      await colearnerChatService.addMessage(
+        chatSessionId,
+        currentUserName,
+        newChatMessage,
+        "text"
+      );
+      console.log('✅ Chat message logged to backend');
+    } catch (error) {
+      console.error('❌ Error logging chat message:', error);
+    }
+
+    setNewChatMessage('');
+  };
+
+  // Function to copy share link
+  const handleCopyShareLink = async () => {
+    if (!chatSessionId || !activityLogId) return;
+
+    const shareLink = `${window.location.origin}?shared=${activityLogId}&session=${chatSessionId}`;
+    
+    try {
+      await copyToClipboard(shareLink);
+      setLinkCopied(true);
+      console.log('✅ Share link copied:', shareLink);
+      
+      // Reset after 2 seconds
+      setTimeout(() => setLinkCopied(false), 2000);
+    } catch (error) {
+      console.error('❌ Failed to copy link:', error);
     }
   };
 
   const responses = [
     {
       id: 1,
-      user: "Obi E.",
-      userColor: "from-blue-500 to-cyan-500",
-      answer: "x = 5",
-      explanation: "I solved this by isolating the variable. First, I added 3 to both sides, then divided by 2.",
-      likes: 12,
-      timestamp: "2 min ago"
-    },
-    {
-      id: 2,
-      user: "Agu C.",
-      userColor: "from-purple-500 to-pink-500",
-      answer: "x = 5",
-      explanation: "Used the distributive property to simplify, then combined like terms before solving for x.",
-      likes: 8,
-      timestamp: "5 min ago"
-    },
-    {
-      id: 3,
-      user: "Jordan T.",
-      userColor: "from-green-500 to-emerald-500",
-      answer: "x = 5",
-      explanation: "I approached it differently by factoring first, which made it easier to see the solution.",
-      likes: 15,
-      timestamp: "8 min ago"
-    },
-    {
-      id: 4,
       user: currentUserName,
       userColor: "from-orange-500 to-red-500",
       answer: "",
@@ -207,32 +215,120 @@ export const CoLearnScreen = ({
 
               {response.isCurrentUser ? (
                 <>
-                  {/* Your Input */}
-                  <div className="space-y-3">
-                    <div>
-                      <label className="text-[12px] font-medium text-gray-700 mb-1 block">
-                        Your Answer
-                      </label>
-                      <input
-                        type="text"
-                        placeholder="Enter your answer"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-[13px] focus:outline-none focus:border-orange-500 bg-white"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-[12px] font-medium text-gray-700 mb-1 block">
-                        Your Explanation
-                      </label>
-                      <textarea
-                        placeholder="Explain your approach and reasoning"
-                        rows={3}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-[13px] focus:outline-none focus:border-orange-500 resize-none bg-white"
-                      />
-                    </div>
-                    <button className="w-full py-2 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-lg text-[14px] font-medium hover:opacity-90 transition-opacity">
-                      Share with Co-Learners
-                    </button>
-                  </div>
+                  {hasShared ? (
+                    <>
+                      {/* Your Shared Response */}
+                      <div className="space-y-2">
+                        <div>
+                          <p className="text-[11px] font-medium text-gray-500 mb-1">YOUR ANSWER</p>
+                          <p className="text-[14px] font-semibold text-gray-900">{userAnswer}</p>
+                        </div>
+                        <div>
+                          <p className="text-[11px] font-medium text-gray-500 mb-1">YOUR EXPLANATION</p>
+                          <p className="text-[13px] text-gray-700 leading-relaxed">
+                            {userExplanation}
+                          </p>
+                        </div>
+                      </div>
+                      
+                      {/* Success message */}
+                      <div className="mt-3 p-2 bg-green-50 border border-green-200 rounded-md">
+                        <p className="text-[11px] text-green-700 font-medium">✅ Shared with co-learners!</p>
+                      </div>
+
+                      {/* Discussion Section */}
+                      <div className="mt-3 pt-3 border-t border-gray-200">
+                        <button 
+                          onClick={() => setShowChat(!showChat)}
+                          className="flex items-center gap-2 text-[12px] text-purple-600 hover:bg-purple-50 px-3 py-1.5 rounded-md transition-colors w-full justify-between"
+                        >
+                          <span className="flex items-center gap-2">
+                            <MessageCircle size={14} />
+                            <span>Discussion ({chatMessages.length})</span>
+                          </span>
+                          <span className="text-[10px]">{showChat ? '▼' : '▶'}</span>
+                        </button>
+
+                        {/* Chat Thread */}
+                        {showChat && (
+                          <div className="mt-3 space-y-3">
+                            {/* Chat Messages */}
+                            <div className="space-y-2 max-h-[200px] overflow-y-auto">
+                              {chatMessages.map((msg, idx) => (
+                                <div key={idx} className="bg-white rounded-lg p-2 border border-gray-200">
+                                  <div className="flex items-start justify-between mb-1">
+                                    <p className="text-[11px] font-semibold text-gray-900">{msg.sender}</p>
+                                    <p className="text-[9px] text-gray-400">{msg.timestamp}</p>
+                                  </div>
+                                  <p className="text-[12px] text-gray-700">{msg.message}</p>
+                                </div>
+                              ))}
+                            </div>
+
+                            {/* Chat Input */}
+                            <div className="flex gap-2">
+                              <input
+                                type="text"
+                                placeholder="Reply to co-learners..."
+                                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-[12px] focus:outline-none focus:border-purple-500 bg-white"
+                                value={newChatMessage}
+                                onChange={(e) => setNewChatMessage(e.target.value)}
+                                onKeyPress={(e) => {
+                                  if (e.key === 'Enter' && newChatMessage.trim()) {
+                                    handleSendChatMessage();
+                                  }
+                                }}
+                              />
+                              <button
+                                onClick={handleSendChatMessage}
+                                disabled={!newChatMessage.trim()}
+                                className="px-4 py-2 bg-purple-600 text-white rounded-lg text-[12px] font-medium hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                              >
+                                Send
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      {/* Your Input */}
+                      <div className="space-y-3">
+                        <div>
+                          <label className="text-[12px] font-medium text-gray-700 mb-1 block">
+                            Your Answer
+                          </label>
+                          <input
+                            type="text"
+                            placeholder="Enter your answer"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-[13px] focus:outline-none focus:border-orange-500 bg-white"
+                            value={userAnswer}
+                            onChange={(e) => setUserAnswer(e.target.value)}
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[12px] font-medium text-gray-700 mb-1 block">
+                            Your Explanation
+                          </label>
+                          <textarea
+                            placeholder="Explain your approach and reasoning"
+                            rows={3}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-[13px] focus:outline-none focus:border-orange-500 resize-none bg-white"
+                            value={userExplanation}
+                            onChange={(e) => setUserExplanation(e.target.value)}
+                          />
+                        </div>
+                        <button
+                          className="w-full py-2 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-lg text-[14px] font-medium hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+                          onClick={handleShareResponse}
+                          disabled={isSharing || !userAnswer.trim() || !userExplanation.trim()}
+                        >
+                          {isSharing ? 'Sharing...' : 'Share with Co-Learners'}
+                        </button>
+                      </div>
+                    </>
+                  )}
                 </>
               ) : (
                 <>
@@ -268,17 +364,17 @@ export const CoLearnScreen = ({
       <div className="px-4 pt-4 pb-6 bg-gray-50 border-t border-gray-200">
         <div className="flex items-start justify-around">
           <div className="text-center">
-            <p className="text-[24px] font-bold text-purple-600 leading-none">4</p>
+            <p className="text-[24px] font-bold text-purple-600 leading-none">1</p>
             <p className="text-[10px] text-gray-500 mt-1">Total students</p>
           </div>
           <div className="w-px h-12 bg-gray-300 mt-1"></div>
           <div className="text-center">
-            <p className="text-[24px] font-bold text-green-600 leading-none">3/4</p>
+            <p className="text-[24px] font-bold text-green-600 leading-none">{hasShared ? '1/1' : '0/1'}</p>
             <p className="text-[10px] text-gray-500 mt-1">Have shared</p>
           </div>
           <div className="w-px h-12 bg-gray-300 mt-1"></div>
           <div className="text-center">
-            <p className="text-[24px] font-bold text-blue-600 leading-none">3/3</p>
+            <p className="text-[24px] font-bold text-blue-600 leading-none">-</p>
             <p className="text-[10px] text-gray-500 mt-1">Got same answer</p>
           </div>
         </div>

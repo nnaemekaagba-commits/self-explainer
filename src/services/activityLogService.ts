@@ -56,6 +56,8 @@ export interface ActivityLog {
   status: 'in-progress' | 'completed';
   learningThreadId?: string; // ID to group related questions (guided solution + practice problems)
   isPractice?: boolean; // Whether this is a practice problem
+  isShared?: boolean; // Whether this is a shared/collaborative question
+  sharedSessionId?: string; // Co-learner chat session ID if shared
 }
 
 // Create a new activity log
@@ -64,7 +66,9 @@ export async function createActivityLog(
   question: string, 
   totalSteps: number,
   learningThreadId?: string,
-  isPractice?: boolean
+  isPractice?: boolean,
+  isShared?: boolean,
+  sharedSessionId?: string
 ): Promise<string> {
   try {
     console.log('🏗️ createActivityLog called with:', {
@@ -72,7 +76,9 @@ export async function createActivityLog(
       question,
       totalSteps,
       learningThreadId,
-      isPractice
+      isPractice,
+      isShared,
+      sharedSessionId
     });
     
     const log: ActivityLog = {
@@ -91,7 +97,9 @@ export async function createActivityLog(
       totalAIQueriesUsed: 0,
       status: 'in-progress',
       ...(learningThreadId && { learningThreadId }),
-      ...(isPractice && { isPractice })
+      ...(isPractice && { isPractice }),
+      ...(isShared && { isShared }),
+      ...(sharedSessionId && { sharedSessionId })
     };
     
     console.log('📝 Activity log object created:', JSON.stringify(log, null, 2));
@@ -316,6 +324,34 @@ export async function deleteActivityLogs(logIds: string[]): Promise<{ success: b
     return { success: data.success, deletedCount: data.deletedCount };
   } catch (error) {
     console.error('Error deleting selected activity logs:', error);
+    throw error;
+  }
+}
+
+// Mark an activity log as shared (for when someone opens a shared link)
+export async function markActivityAsShared(activityLogId: string, sharedSessionId?: string): Promise<void> {
+  try {
+    console.log('🔗 Marking activity as shared:', activityLogId);
+    
+    const response = await fetch(`${API_BASE_URL}/activity-logs/${activityLogId}/mark-shared`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${publicAnonKey}`,
+        'X-Session-Id': getCurrentSessionId()
+      },
+      body: JSON.stringify({ 
+        sharedSessionId: sharedSessionId || null 
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to mark activity as shared');
+    }
+
+    console.log('✅ Activity marked as shared successfully');
+  } catch (error) {
+    console.error('Error marking activity as shared:', error);
     throw error;
   }
 }

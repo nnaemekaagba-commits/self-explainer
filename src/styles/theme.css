@@ -182,107 +182,173 @@
 
 /* Math content styling - proper spacing and formatting */
 .math-content {
-  line-height: 1.8;
+  line-height: 2.0;
   word-spacing: normal;
   letter-spacing: normal;
   font-weight: 400;
-  color: #1f2937; /* gray-800 for good readability */
-  font-size: 15px;
+  color: #000000;
+  font-size: 16px;
 }
 
-/* KaTeX inline math - better spacing */
+/* KaTeX inline math - better spacing and clarity */
 .math-content .inline-math {
-  margin: 0 0.15em;
+  margin: 0 0.2em;
   display: inline-block;
-  vertical-align: baseline;
+  vertical-align: middle;
+  padding: 0.1em 0.05em;
 }
 
-/* Improve KaTeX rendering - clear and professional */
+/* BASE SIZE - Set font size only on the root katex element, not children */
 .katex {
-  font-size: 1.1em !important;
-  line-height: 1.6;
-  color: #111827 !important; /* gray-900 for math */
-  font-weight: normal !important;
+  font-size: 28px !important;
+  line-height: 1.8 !important;
+  color: #000000 !important;
 }
 
-.katex-display {
-  margin: 1.5em 0 !important;
-  padding: 0;
-  text-align: center;
+span.katex,
+div.katex {
+  font-size: 28px !important;
 }
 
-/* Better rendering for display mode */
+/* Display mode - EVEN LARGER */
+.katex-display,
 .katex-display > .katex {
-  font-size: 1.3em !important;
-  color: #111827 !important;
-  font-weight: normal !important;
+  font-size: 36px !important;
+  margin: 1.5em 0 !important;
+  padding: 0.5em 0 !important;
+  text-align: center !important;
 }
 
-/* Ensure variables are italic (standard math notation) */
+/* ALL text in math - BOLD by default */
+.katex *,
+.katex span,
+.katex .base,
+.katex .strut {
+  font-weight: 700 !important;
+  color: #000000 !important;
+}
+
+/* Variables - BOLD ITALIC */
 .katex .mord.mathnormal,
-.katex .mord.mathit {
+.katex .mord.mathit,
+.katex .mathnormal,
+.katex .mathit,
+span.mord.mathnormal,
+span.mord.mathit {
   font-style: italic !important;
-  font-weight: normal !important;
+  font-weight: 700 !important;
+  color: #000000 !important;
 }
 
-/* Make subscripts and superscripts clear */
-.katex .msupsub {
-  font-style: italic !important;
-  font-weight: normal !important;
+/* Numbers - BOLD UPRIGHT */
+.katex .mord.mathrm,
+.katex .mathrm,
+span.mord.mathrm,
+.katex .mord:not(.mathnormal):not(.mathit) {
+  font-weight: 700 !important;
+  font-style: normal !important;
+  color: #000000 !important;
 }
 
-/* Fix spacing around mathematical symbols */
-.math-content .katex .mord,
-.math-content .katex .mbin,
-.math-content .katex .mrel,
-.math-content .katex .mop {
-  margin-left: 0.05em;
-  margin-right: 0.05em;
-}
-
-/* Make fractions more readable */
-.katex .frac-line {
-  border-bottom-width: 0.04em !important;
-  border-color: #111827 !important;
-}
-
-.katex .mfrac {
-  vertical-align: 0.35em;
-}
-
-/* Better symbol spacing */
-.katex .mspace {
-  margin: 0.15em !important;
-}
-
-/* Improve subscript/superscript readability */
-.katex .msupsub {
-  font-size: 0.75em;
-}
-
-/* Make square roots clearer */
-.katex .sqrt > .vlist-t {
-  border-left-width: 0.04em !important;
-}
-
-/* Better rendering for common math symbols */
+/* Operators - BOLD AND LARGER */
+.katex .mbin,
 .katex .mrel,
-.katex .mbin {
-  padding: 0 0.2em;
+.katex .mop,
+.katex .mopen,
+.katex .mclose,
+.katex .mpunct,
+span.mbin,
+span.mrel,
+span.mop {
+  font-weight: 700 !important;
+  color: #000000 !important;
+  padding: 0 0.3em !important;
 }
 
-/* Make parentheses and brackets properly visible */
+/* Subscripts and superscripts - LARGER */
+.katex .msupsub,
+.katex sup,
+.katex sub,
+.katex .vlist-t,
+.katex .vlist-r,
+.katex .vlist {
+  font-weight: 700 !important;
+  color: #000000 !important;
+}
+
+.katex .sizing,
+.katex .fontsize-ensurer {
+  font-weight: 700 !important;
+}
+
+/* Fractions - THICK lines */
+.katex .frac-line,
+.katex .frac-line:before,
+.katex .frac-line:after {
+  border-bottom-width: 0.12em !important;
+  border-color: #000000 !important;
+  background: #000000 !important;
+  height: 0.12em !important;
+}
+
+/* Square roots - THICK */
+.katex .sqrt > .vlist-t,
+.katex .sqrt .vlist-t .sqrt-line {
+  border-left-width: 0.12em !important;
+  border-bottom-width: 0.12em !important;
+  border-color: #000000 !important;
+}
+
+/* Parentheses and delimiters - BOLD */
 .katex .delimsizing,
 .katex .delim-size1,
 .katex .delim-size2,
 .katex .delim-size3,
-.katex .delim-size4 {
-  font-weight: normal !important;
+.katex .delim-size4,
+.katex .sizing {
+  font-weight: 700 !important;
+  color: #000000 !important;
 }
 
-/* Consistent text color for all math elements */
-.katex * {
-  color: #111827 !important;
+/* FORMULA BOXES - MAXIMUM SIZE */
+.formula-box,
+.formula-box * {
+  color: #000000 !important;
+}
+
+.formula-box .katex,
+.formula-box .katex-html,
+.formula-box div.katex,
+.formula-box span.katex {
+  font-size: 42px !important;
+  font-weight: 800 !important;
+}
+
+.formula-box .katex-display,
+.formula-box .katex-display > .katex {
+  font-size: 52px !important;
+  font-weight: 800 !important;
+}
+
+.formula-box .katex *,
+.formula-box .katex span {
+  font-weight: 800 !important;
+  color: #000000 !important;
+}
+
+/* Formula box fractions - EXTRA THICK */
+.formula-box .frac-line {
+  border-bottom-width: 0.15em !important;
+  height: 0.15em !important;
+  background: #000000 !important;
+}
+
+/* Remove any transparency */
+.katex,
+.katex *,
+.formula-box,
+.formula-box * {
+  opacity: 1 !important;
 }
 
 /* Modal animations */

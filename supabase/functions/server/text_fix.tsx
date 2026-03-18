@@ -2,8 +2,8 @@
 export function fixMissingSpaces(text: string): string {
   if (!text) return text;
   
-  console.log('TEXT FIX - fixMissingSpaces - Input length:', text.length);
-  console.log('TEXT FIX - First 200 chars:', text.substring(0, 200));
+  console.log('TEXT FIX - fixMissingSpaces - Input length:', text?.length || 0);
+  console.log('TEXT FIX - First 200 chars:', text?.substring(0, 200) || '(empty)');
   
   // Preserve LaTeX regions - don't add spaces inside math
   const mathRegions: Array<{start: number, end: number, content: string}> = [];
@@ -80,8 +80,15 @@ function addSpacesToText(text: string): string {
   
   let fixed = text;
   
+  // IMPORTANT: Don't split words that are already properly formatted
+  // Check if text contains consecutive uppercase letters (likely acronyms or emphasis)
+  const hasConsecutiveUppercase = /[A-Z]{2,}/.test(text);
+  
   // Add space between lowercase and uppercase letters (word boundaries)
-  fixed = fixed.replace(/([a-z])([A-Z])/g, '$1 $2');
+  // Only apply this if we don't have long uppercase sequences
+  if (!hasConsecutiveUppercase) {
+    fixed = fixed.replace(/([a-z])([A-Z])/g, '$1 $2');
+  }
   
   // Add space after period followed by capital letter (sentence boundary)
   fixed = fixed.replace(/\.([A-Z])/g, '. $1');
@@ -92,24 +99,10 @@ function addSpacesToText(text: string): string {
   // Add space after period followed by lowercase (sentences without capitalization)
   fixed = fixed.replace(/\.([a-z])/g, '. $1');
   
-  // Add space before "the", "and", "of", "at", "in", "is", "are", "be", "to", "a", "an", "for"
-  const commonWords = ['the', 'and', 'of', 'at', 'in', 'is', 'are', 'be', 'to', 'for', 'will', 'by', 'with', 'from'];
-  for (const word of commonWords) {
-    // Before the word
-    const beforePattern = new RegExp(`([a-z])(${word})([^a-z])`, 'gi');
-    fixed = fixed.replace(beforePattern, '$1 $2$3');
-    
-    // After the word (at start of next word)
-    const afterPattern = new RegExp(`([^a-z])(${word})([a-z])`, 'gi');
-    fixed = fixed.replace(afterPattern, '$1$2 $3');
-  }
-  
-  // Add space before common verbs
-  const verbs = ['using', 'since', 'calculate', 'find', 'analyze', 'apply', 'use', 'determine', 'solve'];
-  for (const verb of verbs) {
-    const pattern = new RegExp(`([a-z])(${verb})`, 'gi');
-    fixed = fixed.replace(pattern, '$1 $2');
-  }
+  // REMOVED: The aggressive word-splitting logic that was breaking words
+  // The previous regex patterns with 'gi' flag were too aggressive and
+  // would split words like "FORCE" into "FOR CE" by matching common words
+  // within larger words. This fix has been removed to prevent word-splitting.
   
   return fixed;
 }
