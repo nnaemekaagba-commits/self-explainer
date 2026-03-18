@@ -6,227 +6,201 @@ interface MathRendererProps {
   className?: string;
 }
 
+type Token =
+  | { type: 'text'; value: string }
+  | { type: 'math'; value: string; displayMode: boolean; raw: string };
+
+function isEscaped(text: string, index: number): boolean {
+  let backslashCount = 0;
+  let i = index - 1;
+  while (i >= 0 && text[i] === '\\') {
+    backslashCount++;
+    i--;
+  }
+  return backslashCount % 2 === 1;
+}
+
+function findClosingDelimiter(text: string, start: number, delimiter: string): number {
+  let i = start;
+  while (i <= text.length - delimiter.length) {
+    if (text.slice(i, i + delimiter.length) === delimiter && !isEscaped(text, i)) {
+      return i;
+    }
+    i++;
+  }
+  return -1;
+}
+
+function shouldTreatAsInlineMath(text: string, index: number): boolean {
+  const nextChar = text[index + 1];
+  const prevChar = text[index - 1];
+
+  if (!nextChar) return false;
+  if (nextChar === '$' || /\s/.test(nextChar)) return false;
+
+  // Avoid treating currency-like values such as $5 or $20.50 as math.
+  if (/[0-9]/.test(nextChar) && (!prevChar || /\s|[(\[{=:;,]/.test(prevChar))) {
+    return false;
+  }
+
+  return true;
+}
+
+function normalizeContent(raw: string): string {
+  return raw
+    .replace(/```(?:latex|math)?\s*([\s\S]*?)```/gi, '$1')
+    .replace(/\\\$/g, '$')
+    .replace(/\r\n/g, '\n');
+}
+
+function tokenizeMathContent(rawContent: string): Token[] {
+  const content = normalizeContent(rawContent);
+  const tokens: Token[] = [];
+  let cursor = 0;
+  let textBuffer = '';
+
+  const flushText = () => {
+    if (textBuffer) {
+      tokens.push({ type: 'text', value: textBuffer });
+      textBuffer = '';
+    }
+  };
+
+  while (cursor < content.length) {
+    const slice = content.slice(cursor);
+
+    if (slice.startsWith('\\[')) {
+      const end = findClosingDelimiter(content, cursor + 2, '\\]');
+      if (end !== -1) {
+        flushText();
+        const raw = content.slice(cursor, end + 2);
+        tokens.push({
+          type: 'math',
+          value: content.slice(cursor + 2, end).trim(),
+          displayMode: true,
+          raw,
+        });
+        cursor = end + 2;
+        continue;
+      }
+    }
+
+    if (slice.startsWith('\\(')) {
+      const end = findClosingDelimiter(content, cursor + 2, '\\)');
+      if (end !== -1) {
+        flushText();
+        const raw = content.slice(cursor, end + 2);
+        tokens.push({
+          type: 'math',
+          value: content.slice(cursor + 2, end).trim(),
+          displayMode: false,
+          raw,
+        });
+        cursor = end + 2;
+        continue;
+      }
+    }
+
+    if (slice.startsWith('$$') && !isEscaped(content, cursor)) {
+      const end = findClosingDelimiter(content, cursor + 2, '$$');
+      if (end !== -1) {
+        flushText();
+        const raw = content.slice(cursor, end + 2);
+        tokens.push({
+          type: 'math',
+          value: content.slice(cursor + 2, end).trim(),
+          displayMode: true,
+          raw,
+        });
+        cursor = end + 2;
+        continue;
+      }
+    }
+
+    if (content[cursor] === '$' && !isEscaped(content, cursor) && shouldTreatAsInlineMath(content, cursor)) {
+      const end = findClosingDelimiter(content, cursor + 1, '$');
+      if (end !== -1 && end > cursor + 1) {
+        flushText();
+        const raw = content.slice(cursor, end + 1);
+        tokens.push({
+          type: 'math',
+          value: content.slice(cursor + 1, end).trim(),
+          displayMode: false,
+          raw,
+        });
+        cursor = end + 1;
+        continue;
+      }
+    }
+
+    textBuffer += content[cursor];
+    cursor++;
+  }
+
+  flushText();
+  return tokens;
+}
+
+function appendTextWithLineBreaks(container: HTMLElement, text: string) {
+  const segments = text.split('\n');
+
+  segments.forEach((segment, index) => {
+    if (segment.length > 0) {
+      const span = document.createElement('span');
+      span.textContent = segment;
+      container.appendChild(span);
+    }
+
+    if (index < segments.length - 1) {
+      container.appendChild(document.createElement('br'));
+    }
+  });
+}
+
 export function MathRenderer({ content, className }: MathRendererProps) {
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!containerRef.current || !content) return;
+    if (!containerRef.current) return;
 
     const container = containerRef.current;
     container.innerHTML = '';
 
+    if (!content) return;
+
     try {
-      // Process the content character by character to find math delimiters
-      let i = 0;
-      let currentText = '';
+      const tokens = tokenizeMathContent(content);
 
-      while (i < content.length) {
-        // Check for display math: \\[ ... \\]
-        if (i < content.length - 1 && content[i] === '\\' && content[i + 1] === '[') {
-          // Flush any accumulated text
-          if (currentText) {
-            const p = document.createElement('span');
-            p.textContent = currentText;
-            container.appendChild(p);
-            currentText = '';
-          }
-
-          // Find the closing \\]
-          let end = i + 2;
-          while (end < content.length - 1) {
-            if (content[end] === '\\' && content[end + 1] === ']') {
-              break;
-            }
-            end++;
-          }
-
-          if (end < content.length - 1) {
-            const latex = content.slice(i + 2, end);
-            const div = document.createElement('div');
-            div.className = 'katex-display my-4';
-            try {
-              katex.render(latex, div, { 
-                displayMode: true, 
-                throwOnError: false,
-                trust: true,
-                strict: false,
-                minRuleThickness: 0.08  // Thick fraction lines
-              });
-              container.appendChild(div);
-            } catch (e) {
-              console.error('KaTeX display math error:', e);
-              const fallback = document.createElement('div');
-              fallback.textContent = content.slice(i, end + 2);
-              fallback.className = 'text-red-600';
-              container.appendChild(fallback);
-            }
-            i = end + 2;
-            continue;
-          }
+      tokens.forEach((token) => {
+        if (token.type === 'text') {
+          appendTextWithLineBreaks(container, token.value);
+          return;
         }
 
-        // Check for inline math: \\( ... \\)
-        if (i < content.length - 1 && content[i] === '\\' && content[i + 1] === '(') {
-          // Flush any accumulated text
-          if (currentText) {
-            const span = document.createElement('span');
-            span.textContent = currentText;
-            container.appendChild(span);
-            currentText = '';
-          }
+        const wrapper = document.createElement(token.displayMode ? 'div' : 'span');
+        wrapper.className = token.displayMode ? 'math-display-block' : 'math-inline-block';
 
-          // Find the closing \\)
-          let end = i + 2;
-          while (end < content.length - 1) {
-            if (content[end] === '\\' && content[end + 1] === ')') {
-              break;
-            }
-            end++;
-          }
-
-          if (end < content.length - 1) {
-            const latex = content.slice(i + 2, end);
-            const span = document.createElement('span');
-            span.className = 'inline-math';
-            try {
-              katex.render(latex, span, { 
-                displayMode: false, 
-                throwOnError: false,
-                trust: true,
-                strict: false,
-                minRuleThickness: 0.08  // Thick fraction lines
-              });
-              container.appendChild(span);
-            } catch (e) {
-              console.error('KaTeX inline math error:', e);
-              const fallback = document.createElement('span');
-              fallback.textContent = content.slice(i, end + 2);
-              fallback.className = 'text-red-600';
-              container.appendChild(fallback);
-            }
-            i = end + 2;
-            continue;
-          }
+        try {
+          katex.render(token.value, wrapper, {
+            displayMode: token.displayMode,
+            throwOnError: false,
+            strict: false,
+            trust: true,
+            output: 'htmlAndMathml',
+          });
+        } catch (error) {
+          console.error('KaTeX render error:', error);
+          wrapper.textContent = token.raw;
+          wrapper.className += ' math-render-fallback';
         }
 
-        // Check for display math: $$ ... $$
-        if (i < content.length - 1 && content[i] === '$' && content[i + 1] === '$') {
-          // Flush any accumulated text
-          if (currentText) {
-            const span = document.createElement('span');
-            span.textContent = currentText;
-            container.appendChild(span);
-            currentText = '';
-          }
-
-          // Find the closing $$
-          let end = i + 2;
-          while (end < content.length - 1) {
-            if (content[end] === '$' && content[end + 1] === '$') {
-              break;
-            }
-            end++;
-          }
-
-          if (end < content.length - 1) {
-            const latex = content.slice(i + 2, end);
-            const div = document.createElement('div');
-            div.className = 'katex-display my-4';
-            try {
-              katex.render(latex, div, { 
-                displayMode: true, 
-                throwOnError: false,
-                trust: true,
-                strict: false
-              });
-              container.appendChild(div);
-            } catch (e) {
-              console.error('KaTeX display math error:', e);
-              const fallback = document.createElement('div');
-              fallback.textContent = content.slice(i, end + 2);
-              fallback.className = 'text-red-600';
-              container.appendChild(fallback);
-            }
-            i = end + 2;
-            continue;
-          }
-        }
-
-        // Check for inline math: $ ... $
-        if (content[i] === '$' && (i === 0 || content[i - 1] !== '$')) {
-          // Make sure it's not $$
-          if (i + 1 < content.length && content[i + 1] === '$') {
-            currentText += content[i];
-            i++;
-            continue;
-          }
-
-          // Flush any accumulated text
-          if (currentText) {
-            const span = document.createElement('span');
-            span.textContent = currentText;
-            container.appendChild(span);
-            currentText = '';
-          }
-
-          // Find the closing $
-          let end = i + 1;
-          while (end < content.length) {
-            if (content[end] === '$' && content[end - 1] !== '\\') {
-              break;
-            }
-            end++;
-          }
-
-          if (end < content.length) {
-            const latex = content.slice(i + 1, end);
-            const span = document.createElement('span');
-            span.className = 'inline-math';
-            try {
-              katex.render(latex, span, { 
-                displayMode: false, 
-                throwOnError: false,
-                trust: true,
-                strict: false,
-                minRuleThickness: 0.08  // Thick fraction lines
-              });
-              container.appendChild(span);
-            } catch (e) {
-              console.error('KaTeX inline math error:', e);
-              const fallback = document.createElement('span');
-              fallback.textContent = content.slice(i, end + 1);
-              fallback.className = 'text-red-600';
-              container.appendChild(fallback);
-            }
-            i = end + 1;
-            continue;
-          }
-        }
-
-        // Regular character
-        currentText += content[i];
-        i++;
-      }
-
-      // Flush any remaining text
-      if (currentText) {
-        const span = document.createElement('span');
-        span.textContent = currentText;
-        container.appendChild(span);
-      }
+        container.appendChild(wrapper);
+      });
     } catch (error) {
-      // If anything goes wrong, just display the content as plain text
       console.error('MathRenderer error:', error);
-      if (containerRef.current) {
-        containerRef.current.textContent = content;
-      }
+      container.textContent = content;
     }
   }, [content]);
 
-  return (
-    <div 
-      ref={containerRef} 
-      className={`math-content ${className || ''}`}
-    />
-  );
+  return <div ref={containerRef} className={`math-content ${className || ''}`} />;
 }

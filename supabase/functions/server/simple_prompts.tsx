@@ -99,7 +99,7 @@ SPECIAL SYMBOLS:
 [+] Inline math: \\(x + y = z\\)
 [+] Display math (centered): \\[E = mc^2\\]
 [-] NEVER write equations without LaTeX delimiters
-
+[+] Keep explanatory sentences as normal text, but wrap every equation, variable, fraction, exponent, or substitution in LaTeX delimiters\n[+] Use line breaks between major equations so each displayed expression appears on its own line\n[+] Prefer \\[ ... \\] for standalone equations and \\( ... \\) for short inline math\n[-] NEVER put LaTeX inside markdown code fences or backticks\n[+] Keep explanatory sentences as normal text, but wrap every equation, variable, fraction, exponent, or substitution in LaTeX delimiters\n[+] Use line breaks between major equations so each displayed expression appears on its own line\n[+] Prefer \\[ ... \\] for standalone equations and \\( ... \\) for short inline math\n[-] NEVER put LaTeX inside markdown code fences or backticks\n
 **FORMATTING PATTERNS:**
 [+] Text with inline math: "Substitute \\(F_{GI} = 18\\) kip and \\(F_{DF} = -12.86\\) kip:"
 [+] Display equation: \\[\\sum F_x = 0\\]

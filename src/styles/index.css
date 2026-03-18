@@ -27,3 +27,50 @@
   animation: flip-page 1.5s ease-in-out infinite;
   animation-delay: 0.6s;
 }
+
+
+.math-content {
+  white-space: normal;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  line-height: 1.65;
+}
+
+.math-content .math-inline-block {
+  display: inline-block;
+  max-width: 100%;
+  vertical-align: middle;
+}
+
+.math-content .math-display-block {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  margin: 0.85rem 0;
+  padding: 0.15rem 0;
+}
+
+.math-content .katex-display {
+  margin: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-bottom: 0.15rem;
+}
+
+.math-content .katex {
+  max-width: 100%;
+  font-size: 1.02em;
+}
+
+.math-content .katex-display > .katex {
+  display: inline-block;
+  min-width: max-content;
+}
+
+.math-content .math-render-fallback {
+  color: #b91c1c;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  white-space: pre-wrap;
+}
