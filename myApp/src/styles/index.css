@@ -1,0 +1,63 @@
+@import './fonts.css';
+@import './tailwind.css';
+@import './theme.css';
+
+/* Flipping book animation */
+@keyframes flip-page {
+  0%, 100% {
+    transform: perspective(1000px) rotateY(0deg);
+    opacity: 1;
+  }
+  50% {
+    transform: perspective(1000px) rotateY(-180deg);
+    opacity: 0.3;
+  }
+}
+
+.animate-flip-page-1 {
+  animation: flip-page 1.5s ease-in-out infinite;
+}
+
+.animate-flip-page-2 {
+  animation: flip-page 1.5s ease-in-out infinite;
+  animation-delay: 0.3s;
+}
+
+.animate-flip-page-3 {
+  animation: flip-page 1.5s ease-in-out infinite;
+  animation-delay: 0.6s;
+}
+
+
+.math-content {
+  line-height: 1.65;
+  color: inherit;
+  overflow-wrap: anywhere;
+}
+
+.math-content .math-text {
+  white-space: pre-wrap;
+}
+
+.math-content .inline-math {
+  display: inline;
+}
+
+.math-content .math-block,
+.math-content .katex-display {
+  display: block;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  margin: 0.75rem 0;
+  padding: 0.125rem 0;
+}
+
+.math-content .katex {
+  font-size: 1.05em;
+}
+
+.math-content .math-fallback {
+  color: #b91c1c;
+  white-space: pre-wrap;
+}
