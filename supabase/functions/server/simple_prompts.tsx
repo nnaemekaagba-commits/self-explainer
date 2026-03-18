@@ -100,6 +100,16 @@ SPECIAL SYMBOLS:
 [+] Display math (centered): \\[E = mc^2\\]
 [-] NEVER write equations without LaTeX delimiters
 
+**OUTPUT CLEANLINESS RULES (MANDATORY):**
+[+] Put each major displayed equation on its own line
+[+] Keep explanation text outside math delimiters unless it belongs inside the expression
+[+] Use \\text{...} for units and words inside equations
+[+] Prefer display math for long derivations and multi-step substitutions
+[+] Keep inline math short and readable
+[-] NEVER wrap any part of the response in markdown code fences
+[-] NEVER use backticks around equations
+[-] NEVER mix plain-text symbols like sqrt, /, x, or +/- when proper LaTeX is needed
+
 **FORMATTING PATTERNS:**
 [+] Text with inline math: "Substitute \\(F_{GI} = 18\\) kip and \\(F_{DF} = -12.86\\) kip:"
 [+] Display equation: \\[\\sum F_x = 0\\]
@@ -218,6 +228,16 @@ SPECIAL SYMBOLS:
 [+] Display math (centered): \\[E = mc^2\\]
 [-] NEVER write equations without LaTeX delimiters
 
+**OUTPUT CLEANLINESS RULES (MANDATORY):**
+[+] Put each major displayed equation on its own line
+[+] Keep explanation text outside math delimiters unless it belongs inside the expression
+[+] Use \\text{...} for units and words inside equations
+[+] Prefer display math for long derivations and multi-step substitutions
+[+] Keep inline math short and readable
+[-] NEVER wrap any part of the response in markdown code fences
+[-] NEVER use backticks around equations
+[-] NEVER mix plain-text symbols like sqrt, /, x, or +/- when proper LaTeX is needed
+
 **FORMATTING PATTERNS:**
 [+] Text with inline math: "Substitute \\(F_{GI} = 18\\) kip and \\(F_{DF} = -12.86\\) kip:"
 [+] Display equation: \\[\\sum F_x = 0\\]
@@ -274,6 +294,10 @@ FOR EACH STEP:
 4. DIAGRAM: Visual description for physics/engineering
 
 MANDATORY - USE PROFESSIONAL MATHEMATICAL SYMBOLS:
+[+] Put one major equation per line when showing calculations
+[+] Split long derivations across separate display equations
+[+] Write units as \\text{N}, \\text{m}, \\text{s}, etc. inside LaTeX
+[-] NEVER return markdown tables or code blocks for math solutions
 [+] Multiplication: \\(5 \\times 10\\) or \\(5 \\cdot 10\\) (NOT "5 x 10")
 [+] Division: \\(\\frac{588}{4}\\) (NOT "588 / 4" except in calculations)
 [+] Exponents: \\(v^2\\), \\(x^3\\) (NOT "v2" or "x^2" in text)

@@ -27,3 +27,67 @@
   animation: flip-page 1.5s ease-in-out infinite;
   animation-delay: 0.6s;
 }
+
+
+.math-content {
+  width: 100%;
+  line-height: 1.7;
+  word-break: break-word;
+}
+
+.math-content .math-paragraph + .math-paragraph {
+  margin-top: 0.9rem;
+}
+
+.math-content .math-paragraph {
+  display: block;
+}
+
+.math-content .math-text-block {
+  display: inline;
+  white-space: pre-wrap;
+}
+
+.math-content .math-inline-block {
+  display: inline-block;
+  max-width: 100%;
+  vertical-align: middle;
+}
+
+.math-content .math-display-block {
+  display: block;
+  width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 0.6rem 0.1rem;
+  margin: 0.55rem 0;
+}
+
+.math-content .math-display-block .katex-display {
+  margin: 0;
+  padding: 0.1rem 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.math-content .math-display-block .katex {
+  white-space: nowrap;
+}
+
+.math-content .math-display-block::-webkit-scrollbar,
+.math-content .math-display-block .katex-display::-webkit-scrollbar {
+  height: 6px;
+}
+
+.math-content .math-display-fallback,
+.math-content .math-inline-fallback {
+  color: #b91c1c;
+  background: rgba(185, 28, 28, 0.08);
+  border-radius: 0.5rem;
+  padding: 0.125rem 0.35rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+.math-content br {
+  content: '';
+}
