@@ -119,6 +119,7 @@ function buildDomainSpecificScaffoldRules(question: string, topicInfo: any): str
 - For inclined members, resolve forces with \\(\\cos(\\theta)\\) and \\(\\sin(\\theta)\\) using proper LaTeX.
 - Use member-force notation like \\(F_{AB}\\), \\(F_{AC}\\), \\(R_A\\), and \\(N_B\\).
 - Never write malformed statics text like \\thet, F_[AB], or "\\sum F_x = 0:".
+- If the problem does not provide enough geometry or angle information, do NOT invent it. Derive symbolic equilibrium equations first and state that numerical member forces require the missing geometry.
 - Do 70% of the setup and algebra, then leave the final simple solve step for the student.`;
   }
 

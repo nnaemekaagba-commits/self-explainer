@@ -54,6 +54,49 @@ function parseSimpleLinearEquation(question: string): { a: number; b: number; c:
   return { a, b, c };
 }
 
+function parseStaticsJointProblem(question: string): {
+  horizontalLoad: number | null;
+  horizontalDirection: 'left' | 'right' | null;
+  memberLoad: number | null;
+  loadedMember: string | null;
+  unknownMembers: string[];
+  jointName: string | null;
+} | null {
+  const lowerQ = question.toLowerCase();
+  if (!/\b(statics|truss|joint|member|equilibrium|force|reaction)\b/.test(lowerQ)) {
+    return null;
+  }
+
+  const jointMatch = question.match(/\bjoint\s+([A-Z])/i);
+  const unknownMembersMatch = question.match(/\bmembers?\s+([A-Z]{2})\s+and\s+([A-Z]{2})/i);
+  const alongMemberMatch = question.match(/([-+]?\d*\.?\d+)\s*(?:-|\s)?N\b[^.]*?\balong member\s+([A-Z]{2})/i);
+  const horizontalMatch = question.match(/([-+]?\d*\.?\d+)\s*(?:-|\s)?N\b[^.]*?\bhorizontal/i);
+
+  let horizontalDirection: 'left' | 'right' | null = null;
+  if (/\bto the right\b|\bacts to the right\b|\brightward\b/i.test(question)) {
+    horizontalDirection = 'right';
+  } else if (/\bto the left\b|\bacts to the left\b|\bleftward\b/i.test(question)) {
+    horizontalDirection = 'left';
+  }
+
+  const unknownMembers = unknownMembersMatch
+    ? [unknownMembersMatch[1].toUpperCase(), unknownMembersMatch[2].toUpperCase()]
+    : [];
+
+  const horizontalLoad = horizontalMatch ? Number(horizontalMatch[1]) : null;
+  const memberLoad = alongMemberMatch ? Number(alongMemberMatch[1]) : null;
+  const loadedMember = alongMemberMatch ? alongMemberMatch[2].toUpperCase() : null;
+
+  return {
+    horizontalLoad: Number.isFinite(horizontalLoad as number) ? horizontalLoad : null,
+    horizontalDirection,
+    memberLoad: Number.isFinite(memberLoad as number) ? memberLoad : null,
+    loadedMember,
+    unknownMembers,
+    jointName: jointMatch ? jointMatch[1].toUpperCase() : null,
+  };
+}
+
 // Generate problem-specific partial solution
 function generatePartialSolution(question: string): {
   solution: string;
@@ -61,6 +104,48 @@ function generatePartialSolution(question: string): {
   steps: Array<{ title: string; description: string; formula: string }>;
 } {
   const lowerQ = question.toLowerCase();
+  const staticsJoint = parseStaticsJointProblem(question);
+
+  if (staticsJoint && staticsJoint.unknownMembers.length >= 2) {
+    const jointLabel = staticsJoint.jointName || 'the joint';
+    const memberA = staticsJoint.unknownMembers[0];
+    const memberB = staticsJoint.unknownMembers[1];
+    const horizontalLoadText = staticsJoint.horizontalLoad !== null ? `${staticsJoint.horizontalLoad}` : 'P';
+    const signedHorizontalTerm = staticsJoint.horizontalDirection === 'right'
+      ? `-${horizontalLoadText}`
+      : staticsJoint.horizontalDirection === 'left'
+        ? `+${horizontalLoadText}`
+        : `\\pm ${horizontalLoadText}`;
+    const loadedMember = staticsJoint.loadedMember || 'AD';
+    const memberLoadText = staticsJoint.memberLoad !== null ? `${staticsJoint.memberLoad}` : `F_{${loadedMember}}`;
+
+    return {
+      solution: `Treat joint ${jointLabel} as a particle in equilibrium. Resolve the inclined member force into components, write \\(\\sum F_x = 0\\) and \\(\\sum F_y = 0\\), and leave the final sign interpretation or arithmetic for the student.`,
+      strategy: `I will do the free-body setup and most of the equilibrium algebra. If the geometry or angle is missing, I will keep the equations symbolic instead of inventing values.`,
+      steps: [
+        {
+          title: `Analyze Joint ${jointLabel}`,
+          description: `Assume the unknown member forces act away from joint ${jointLabel} so tension is positive. The known horizontal load is \\(${horizontalLoadText}\\,\\text{N}\\) ${staticsJoint.horizontalDirection ? `acting to the ${staticsJoint.horizontalDirection}` : `acting horizontally`}, and member ${loadedMember} carries \\(${memberLoadText}\\,\\text{N}\\) along its own axis.`,
+          formula: `\\[\\sum F_x = 0\\]\n\\[\\sum F_y = 0\\]`
+        },
+        {
+          title: "Write Horizontal Equilibrium",
+          description: `Resolve the inclined force in member ${loadedMember} into its horizontal component and balance the x-direction forces at the joint. This gives the working equation for member \\(F_{${memberA}}\\).`,
+          formula: `\\[\\sum F_x = 0\\]\n\\[F_{${memberA}} + ${memberLoadText}\\cos(\\theta) ${signedHorizontalTerm} = 0\\]`
+        },
+        {
+          title: "Write Vertical Equilibrium",
+          description: `Now balance the y-direction forces. The vertical component of member ${loadedMember} combines with the force in member \\(F_{${memberB}}\\) to keep the joint in equilibrium.`,
+          formula: `\\[\\sum F_y = 0\\]\n\\[F_{${memberB}} + ${memberLoadText}\\sin(\\theta) = 0\\]`
+        },
+        {
+          title: "Finish the Member Forces",
+          description: `Rearrange each equation to isolate \\(F_{${memberA}}\\) and \\(F_{${memberB}}\\). If the diagram gives \\(\\theta\\), substitute it next; otherwise these symbolic expressions are the correct equilibrium setup.`,
+          formula: `\\[F_{${memberA}} = ${horizontalLoadText} - ${memberLoadText}\\cos(\\theta)\\]\n\\[F_{${memberB}} = -${memberLoadText}\\sin(\\theta)\\]`
+        }
+      ]
+    };
+  }
 
   // Detect problem type and generate specific solution
 

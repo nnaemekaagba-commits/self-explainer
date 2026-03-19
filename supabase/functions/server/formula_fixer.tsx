@@ -45,8 +45,7 @@ function repairMalformedLatex(text: string): string {
     .replace(/\\([A-Za-z]+)\(/g, '\\$1(')
     .replace(/\\([A-Za-z]+)\)/g, '\\$1)')
     .replace(/\\sum\s+F_([xy])\s*=\s*0\s*:/g, '\\sum F_$1 = ')
-    .replace(/\\sum\s+M_?([A-Za-z])\s*=\s*0\s*:/g, '\\sum M_$1 = ')
-    .replace(/\s*:\s*/g, ' = ');
+    .replace(/\\sum\s+M_?([A-Za-z])\s*=\s*0\s*:/g, '\\sum M_$1 = ');
 }
 
 function repairStaticsEquationText(text: string): string {
@@ -68,7 +67,9 @@ function repairStaticsEquationText(text: string): string {
     .replace(/\\cos\s*\(\s*\\thet(?![a-zA-Z])/g, '\\cos(\\theta')
     .replace(/\\sin\s*\(\s*\\thet(?![a-zA-Z])/g, '\\sin(\\theta')
     .replace(/\\cos\s*\\theta/g, '\\cos(\\theta)')
-    .replace(/\\sin\s*\\theta/g, '\\sin(\\theta)');
+    .replace(/\\sin\s*\\theta/g, '\\sin(\\theta)')
+    .replace(/\s+=\s+(\\\[|\\\()/g, ' $1')
+    .replace(/\b(we have|the equations become|this gives|therefore)\s+=\s+/gi, '$1 ');
 }
 
 function looksLikeStandaloneFormula(line: string): boolean {
