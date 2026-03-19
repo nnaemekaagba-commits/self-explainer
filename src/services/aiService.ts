@@ -30,6 +30,30 @@ interface ValidateAnswerResponse {
   feedback: string;
 }
 
+
+function extractFirstNumberAfterKeyword(question: string, keyword: string): number | null {
+  const regex = new RegExp(`${keyword}\\s*(?:of\\s*)?([-+]?\\d*\\.?\\d+)`, 'i');
+  const match = question.match(regex);
+  return match ? Number(match[1]) : null;
+}
+
+function parseSimpleLinearEquation(question: string): { a: number; b: number; c: number } | null {
+  const cleaned = question.replace(/\s+/g, '').replace(/−/g, '-');
+  const match = cleaned.match(/([-+]?\d*\.?\d*)x([+-]\d+\.?\d*)?=([-+]?\d+\.?\d*)/i);
+  if (!match) return null;
+
+  const aRaw = match[1];
+  const bRaw = match[2] || '+0';
+  const cRaw = match[3];
+
+  const a = aRaw === '' || aRaw === '+' ? 1 : aRaw === '-' ? -1 : Number(aRaw);
+  const b = Number(bRaw);
+  const c = Number(cRaw);
+
+  if ([a, b, c].some((n) => Number.isNaN(n))) return null;
+  return { a, b, c };
+}
+
 // Generate problem-specific partial solution
 function generatePartialSolution(question: string): {
   solution: string;
@@ -42,31 +66,63 @@ function generatePartialSolution(question: string): {
 
   // Linear equations (e.g., "solve for x: 2x + 5 = 15")
   if (lowerQ.includes('solve for') || (lowerQ.includes('=') && lowerQ.includes('x'))) {
+    const parsed = parseSimpleLinearEquation(question);
+    if (parsed) {
+      const { a, b, c } = parsed;
+      const rhsAfterConstant = c - b;
+      return {
+        solution: `To solve this linear equation, isolate \(x\) using inverse operations while keeping both sides balanced.`,
+        strategy: `First remove the constant term, then divide by the coefficient of \(x\). I will complete the setup and leave the last simple arithmetic step for the student.`,
+        steps: [
+          {
+            title: "Write the equation in working form",
+            description: `Start with \(${a}x ${b >= 0 ? '+' : '-'} ${Math.abs(b)} = ${c}\). We want the \(x\)-term by itself, so the first move is to undo ${b >= 0 ? `\(+${b}\)` : `\(-${Math.abs(b)}\)`}.`,
+            formula: `\\(${a}x ${b >= 0 ? '+' : '-'} ${Math.abs(b)} = ${c}\\)`
+          },
+          {
+            title: "Remove the constant term",
+            description: `Subtract ${b} from both sides: \(${a}x ${b >= 0 ? '+' : '-'} ${Math.abs(b)} ${b >= 0 ? '-' : '+'} ${Math.abs(b)} = ${c} ${b >= 0 ? '-' : '+'} ${Math.abs(b)}\), so \(${a}x = ${rhsAfterConstant}\).`,
+            formula: `\\(${a}x = ${rhsAfterConstant}\\)`
+          },
+          {
+            title: "Isolate the variable",
+            description: `Now divide both sides by the coefficient of \(x\): \(x = \\frac{${rhsAfterConstant}}{${a}}\).`,
+            formula: `\\(x = \\frac{${rhsAfterConstant}}{${a}}\\)`
+          },
+          {
+            title: "Finish the last arithmetic step",
+            description: `The algebra is complete. Only the final numerical simplification remains.`,
+            formula: `\\(x = \\frac{${rhsAfterConstant}}{${a}}\\)`
+          }
+        ].map((step, index) => ({
+          ...step,
+          hint: index === 2 || index === 3 ? `Complete the division \\(\\frac{${rhsAfterConstant}}{${a}}\\). What is the value of \\(x\\)?` : ''
+        }))
+      };
+    }
     return {
-      solution: `To solve this equation, we need to isolate the variable by performing inverse operations on both sides. Work step by step to maintain balance.`,
-      strategy: `When solving equations, remember: whatever you do to one side, you must do to the other side. Start by eliminating constants, then coefficients.`,
+      solution: `To solve this equation, isolate the variable by performing inverse operations on both sides.`,
+      strategy: `I will set up the balancing steps and leave the final simplification for the student.`,
       steps: [
         {
           title: "Identify the Equation",
           description: `Given equation: ${question.split(':')[1]?.trim() || question}. We need to isolate the variable.`,
-          formula: ""
+          formula: "\\(ax + b = c\\)"
         },
         {
           title: "Eliminate Constants",
-          description: "Subtract or add constants from both sides to move all constant terms to one side of the equation.",
-          formula: "If you have ax + b = c, subtract b from both sides: ax = c - b"
+          description: "Move the constant term away from the variable by doing the opposite operation on both sides.",
+          formula: "\\(ax + b = c \\Rightarrow ax = c - b\\)"
         },
         {
           title: "Solve for the Variable",
-          description: "Divide or multiply both sides by the coefficient to isolate the variable.",
-          formula: "If you have ax = b, divide both sides by a: x = b/a"
-        },
-        {
-          title: "Check Your Answer",
-          description: "Substitute your answer back into the original equation to verify it's correct.",
-          formula: ""
+          description: "After the constant is removed, divide both sides by the coefficient of the variable.",
+          formula: "\\(ax = d \\Rightarrow x = \\frac{d}{a}\\)"
         }
-      ]
+      ].map((step, index) => ({
+        ...step,
+        hint: index === 2 ? 'Carry out the final division to get the numerical value of the variable.' : ''
+      }))
     };
   }
 
@@ -102,29 +158,27 @@ function generatePartialSolution(question: string): {
 
   // Area problems
   if (lowerQ.includes('area') && (lowerQ.includes('circle') || lowerQ.includes('radius'))) {
+    const radius = extractFirstNumberAfterKeyword(question, 'radius');
+    const radiusSquared = radius !== null ? radius * radius : null;
     return {
-      solution: `To find the area of a circle, use the formula A = πr², where r is the radius.`,
-      strategy: `Remember that π ≈ 3.14159. Square the radius first, then multiply by π.`,
+      solution: `To find the area of a circle, use \(A = \pi r^2\).`,
+      strategy: `Square the radius first, substitute it into the formula, and leave the final multiplication by \(\pi\) to the student.`,
       steps: [
         {
-          title: "Identify the Radius",
-          description: `From the problem, identify the radius value. ${question.includes('radius') ? 'The radius is given in the problem.' : 'Find the radius from the given information.'}`,
-          formula: ""
+          title: "Identify the radius",
+          description: radius !== null ? `The given radius is \(r = ${radius}\).` : `Identify the radius from the problem statement before substituting into the area formula.`,
+          formula: "\\(A = \\pi r^2\\)"
         },
         {
-          title: "Apply the Formula",
-          description: "Use the area formula for a circle: A = πr²",
-          formula: "A = π × r²"
+          title: "Substitute into the formula",
+          description: radius !== null ? `Substitute \(r = ${radius}\) into \(A = \\pi r^2\): \(A = \\pi(${radius})^2\).` : `Write the formula with the specific radius value substituted in.`,
+          formula: radius !== null ? `\\(A = \\pi(${radius})^2\\)` : "\\(A = \\pi r^2\\)"
         },
         {
-          title: "Calculate",
-          description: "Square the radius value, then multiply by π (≈ 3.14159).",
-          formula: ""
-        },
-        {
-          title: "State the Answer",
-          description: "Write your answer with the appropriate units (square units).",
-          formula: ""
+          title: "Complete the squaring step",
+          description: radiusSquared !== null ? `Square the radius: \(A = \\pi(${radiusSquared})\).` : `Square the radius value before multiplying by \(\\pi\).`,
+          formula: radiusSquared !== null ? `\\(A = ${radiusSquared}\\pi\\)` : "\\(A = \\pi r^2\\)",
+          hint: radiusSquared !== null ? `Now multiply ${radiusSquared} by \\(\\pi\\) and give the area in square units.` : `What do you get after squaring the radius and multiplying by \\(\\pi\\)?`
         }
       ]
     };
@@ -275,14 +329,38 @@ function getDemoSolution(question: string, imageUrl?: string): Promise<SolveProb
 
       if (imageUrl && question.includes('analyze this image')) {
         // Demo: simulate extracting text from image
-        extractedQuestion = "Solve for x: 3x + 7 = 22\n\n(Demo mode: Real AI with proper API keys would use OCR to read the actual image content. Check Supabase logs for errors.)";
+        extractedQuestion = "Solve for x: 3x + 7 = 22\n\n(Fallback mode: the backend did not return a full AI solution, so a local guided solution was generated instead.)";
       } else if (question.includes('PDF document')) {
-        extractedQuestion = "Calculate the area of a circle with radius 5cm\n\n(Demo mode: Real AI with proper API keys would read the actual PDF content. Check Supabase logs for errors.)";
+        extractedQuestion = "Calculate the area of a circle with radius 5cm\n\n(Fallback mode: the backend did not return a full AI solution, so a local guided solution was generated instead.)";
       } else if (question.startsWith('Uploaded file:')) {
-        extractedQuestion = "Example math problem extracted from file\n\n(Demo mode: In production with working API keys, AI would extract and read the actual file content.)";
+        extractedQuestion = "Example math problem extracted from file\n\n(Fallback mode: the backend did not return a full AI solution, so a local guided solution was generated instead.)";
       }
 
-      // Generate problem-specific partial solution
+      
+function extractFirstNumberAfterKeyword(question: string, keyword: string): number | null {
+  const regex = new RegExp(`${keyword}\\s*(?:of\\s*)?([-+]?\\d*\\.?\\d+)`, 'i');
+  const match = question.match(regex);
+  return match ? Number(match[1]) : null;
+}
+
+function parseSimpleLinearEquation(question: string): { a: number; b: number; c: number } | null {
+  const cleaned = question.replace(/\s+/g, '').replace(/−/g, '-');
+  const match = cleaned.match(/([-+]?\d*\.?\d*)x([+-]\d+\.?\d*)?=([-+]?\d+\.?\d*)/i);
+  if (!match) return null;
+
+  const aRaw = match[1];
+  const bRaw = match[2] || '+0';
+  const cRaw = match[3];
+
+  const a = aRaw === '' || aRaw === '+' ? 1 : aRaw === '-' ? -1 : Number(aRaw);
+  const b = Number(bRaw);
+  const c = Number(cRaw);
+
+  if ([a, b, c].some((n) => Number.isNaN(n))) return null;
+  return { a, b, c };
+}
+
+// Generate problem-specific partial solution
       const problemSpecificSolution = generatePartialSolution(extractedQuestion);
 
       resolve({

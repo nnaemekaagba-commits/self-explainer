@@ -93,6 +93,65 @@ async function identifyProblemTopic(question: string, openaiKey: string): Promis
   }
 }
 
+async function repairScaffoldedStepsWithAI(question: string, steps: any[], openaiKey: string) {
+  const invalidReport = validateStepsHaveCalculations(steps);
+  if (invalidReport.allValid) {
+    return steps;
+  }
+
+  console.log(`Repairing ${invalidReport.invalidCount} scaffold step(s) that lack calculations...`);
+
+  try {
+    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${openaiKey}`
+      },
+      body: JSON.stringify({
+        model: "gpt-4o-mini",
+        response_format: { type: "json_object" },
+        temperature: 0.1,
+        messages: [
+          {
+            role: "system",
+            content: `You repair scaffolded tutoring steps.
+Return JSON with a single key called "steps".
+For every step:
+- Keep the title and overall intent.
+- Rewrite description so it SHOWS actual setup, substitution, and intermediate calculation work.
+- Do about 70% of the work, then stop before the final simple arithmetic or simplification.
+- Keep formula non-empty and in LaTeX.
+- Keep hint as a direct question asking the student to finish the remaining 30%.
+- Never return a complete final answer unless the step is purely conceptual.
+- Preserve stepNumber order.`
+          },
+          {
+            role: "user",
+            content: JSON.stringify({ question, steps })
+          }
+        ]
+      })
+    });
+
+    if (!response.ok) {
+      console.error("Repair request failed with status", response.status);
+      return steps;
+    }
+
+    const data = await response.json();
+    const content = data.choices?.[0]?.message?.content;
+    if (!content) return steps;
+    const parsed = JSON.parse(content);
+    const repairedSteps = Array.isArray(parsed.steps) ? parsed.steps : steps;
+    console.log(`Repair call returned ${repairedSteps.length} step(s)`);
+    return repairedSteps;
+  } catch (error) {
+    console.error("Failed to repair scaffolded steps:", error);
+    return steps;
+  }
+}
+
 // Health check endpoint
 app.get("/make-server-9063c65e/health", (c) => {
   return c.json({ status: "ok", timestamp: new Date().toISOString() });
@@ -609,9 +668,19 @@ ${VERIFICATION_PROTOCOL}`
             };
           }));
 
+          // First pass enhancement: strengthen weak descriptions using local heuristics
+          const enhancedSteps = validatedSteps.map((step: any, index: number) => {
+            const enhancement = validateAndEnhanceDescription(step, index, validatedQuestion);
+            return {
+              ...step,
+              description: enhancement.description
+            };
+          });
+
           // CRITICAL VALIDATION: Check if steps actually contain calculations
           console.log("Validating that steps contain actual calculations...");
-          const validationResult = validateStepsHaveCalculations(validatedSteps);
+          let validationResult = validateStepsHaveCalculations(enhancedSteps);
+          let stepsWithDiagrams = enhancedSteps;
           
           if (!validationResult.allValid) {
             console.error("SCAFFOLDING VALIDATION FAILED");
@@ -619,15 +688,29 @@ ${VERIFICATION_PROTOCOL}`
             validationResult.issues.forEach(issue => {
               console.error(`  Step ${issue.stepIndex + 1}: ${issue.issue}`);
             });
-            console.error("AI did not follow scaffolding requirements properly!");
-            
-            // Log the problematic steps for debugging
-            validationResult.issues.forEach(issue => {
-              const step = validatedSteps[issue.stepIndex];
-              console.error(`\nProblematic Step ${issue.stepIndex + 1}:`);
-              console.error(`  Title: ${step.title}`);
-              console.error(`  Description: ${step.description?.substring(0, 200)}...`);
-            });
+            console.error("Attempting one repair pass to add worked calculations...");
+
+            const repairedSteps = await repairScaffoldedStepsWithAI(validatedQuestion, enhancedSteps, openaiKey);
+            stepsWithDiagrams = repairedSteps.map((step: any, index: number) => ({
+              ...step,
+              title: validateAndFixLatex(fixMissingSpaces(step.title || enhancedSteps[index]?.title || "")),
+              description: validateAndFixLatex(fixMissingSpaces(step.description || enhancedSteps[index]?.description || "")),
+              hint: validateAndFixLatex(fixMissingSpaces(step.hint || enhancedSteps[index]?.hint || "")),
+              formula: validateAndFixLatex(fixMissingSpaces(step.formula || enhancedSteps[index]?.formula || generateIntelligentFormula(step, index))),
+              diagram: step.diagram ? validateAndFixLatex(fixMissingSpaces(step.diagram)) : enhancedSteps[index]?.diagram
+            }));
+            validationResult = validateStepsHaveCalculations(stepsWithDiagrams);
+
+            if (!validationResult.allValid) {
+              validationResult.issues.forEach(issue => {
+                const step = stepsWithDiagrams[issue.stepIndex];
+                console.error(`\nStill problematic Step ${issue.stepIndex + 1}:`);
+                console.error(`  Title: ${step.title}`);
+                console.error(`  Description: ${step.description?.substring(0, 200)}...`);
+              });
+            } else {
+              console.log(`Repair succeeded. All ${validationResult.validCount} steps now contain calculations.`);
+            }
           } else {
             console.log(`All ${validationResult.validCount} steps contain proper calculations!`);
           }
@@ -635,7 +718,6 @@ ${VERIFICATION_PROTOCOL}`
           // SKIP DALL-E diagram generation for faster initial response
           // Diagrams can be generated on-demand later if needed
           console.log("⚡ Skipping DALL-E diagram generation for faster response");
-          const stepsWithDiagrams = validatedSteps;
 
           // Return the AI-generated guided solution with OpenAI metadata and DALL-E diagrams
           return c.json({
