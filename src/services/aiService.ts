@@ -714,7 +714,7 @@ export async function askAIForHelp(
 export async function generateDiagram(
   concept: string,
   context?: string
-): Promise<{ svg: string; concept: string; fallback?: boolean }> {
+): Promise<{ svg?: string; imageUrl?: string; concept: string; fallback?: boolean; revisedPrompt?: string; provider?: string }> {
   console.log("🎨 Requesting diagram for:", concept);
 
   const response = await fetch(`${API_BASE_URL}/generate-diagram`, {
@@ -735,13 +735,13 @@ export async function generateDiagram(
   return data;
 }
 
-// Generate DALL-E image for educational diagrams
-export async function generateDalleImage(
+// Generate Gemini image for educational diagrams
+export async function generateGeminiImage(
   prompt: string,
   size: '1024x1024' | '1024x1792' | '1792x1024' = '1024x1024',
   quality: 'standard' | 'hd' = 'standard'
 ): Promise<{ imageUrl: string; revisedPrompt?: string }> {
-  console.log("🎨 Requesting DALL-E image for:", prompt);
+  console.log("Requesting Gemini image for:", prompt);
 
   const response = await fetch(`${API_BASE_URL}/generate-diagram`, {
     method: 'POST',
@@ -754,16 +754,18 @@ export async function generateDalleImage(
 
   if (!response.ok) {
     const errorData = await response.json();
-    throw new Error(errorData.error || 'Failed to generate DALL-E image');
+    throw new Error(errorData.error || 'Failed to generate Gemini image');
   }
 
   const data = await response.json();
-  console.log("✅ DALL-E image generated:", data.imageUrl);
+  console.log("Gemini image generated:", data.imageUrl);
   return {
     imageUrl: data.imageUrl,
     revisedPrompt: data.revisedPrompt
   };
 }
+
+export const generateDalleImage = generateGeminiImage;
 
 export async function generateStepSolution(
   stepData: {

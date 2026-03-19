@@ -308,40 +308,62 @@ Requirements:
 - No decorative background, no photorealism, no extra objects, no watermark`;
 }
 
-async function generateDiagramImage(prompt: string, openaiKey: string, size = "1024x1024", quality = "standard") {
-  const response = await fetch("https://api.openai.com/v1/images/generations", {
+async function generateDiagramImage(prompt: string, geminiKey: string, size = "1024x1024", quality = "standard") {
+  const geminiModel = Deno.env.get("GEMINI_IMAGE_MODEL") || "gemini-2.5-flash-image";
+  const aspectRatioHint = size === "1792x1024"
+    ? "Use a landscape layout."
+    : size === "1024x1792"
+      ? "Use a portrait layout."
+      : "Use a square layout.";
+  const qualityHint = quality === "hd"
+    ? "Prioritize maximum legibility for labels, arrows, formulas, and technical annotations."
+    : "Prioritize a clean, lightweight educational diagram.";
+  const geminiPrompt = `${prompt}
+
+Additional output requirements:
+- Return one polished educational diagram image
+- ${aspectRatioHint}
+- ${qualityHint}
+- Keep text labels readable and mathematically correct
+- No decorative flourishes or photorealistic textures`;
+
+  const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "Authorization": `Bearer ${openaiKey}`
+      "x-goog-api-key": geminiKey
     },
     body: JSON.stringify({
-      model: "dall-e-3",
-      prompt,
-      n: 1,
-      size,
-      quality,
-      style: "natural"
+      contents: [{
+        parts: [{ text: geminiPrompt }]
+      }],
+      generationConfig: {
+        responseModalities: ["TEXT", "IMAGE"]
+      }
     })
   });
 
   if (!response.ok) {
     const errorText = await response.text();
-    throw new Error(`DALL-E generation failed: ${errorText}`);
+    throw new Error(`Gemini image generation failed: ${errorText}`);
   }
 
   const data = await response.json();
-  const imageUrl = data.data?.[0]?.url;
-  const revisedPrompt = data.data?.[0]?.revised_prompt;
+  const parts = data.candidates?.[0]?.content?.parts || [];
+  const imagePart = parts.find((part: any) => part?.inlineData?.data);
+  const revisedPrompt = parts.find((part: any) => typeof part?.text === "string")?.text;
 
-  if (!imageUrl) {
-    throw new Error("No image URL returned from DALL-E");
+  if (!imagePart?.inlineData?.data) {
+    throw new Error("No image data returned from Gemini");
   }
+
+  const mimeType = imagePart.inlineData.mimeType || "image/png";
+  const imageUrl = `data:${mimeType};base64,${imagePart.inlineData.data}`;
 
   return {
     imageUrl,
     revisedPrompt,
-    created: data.created
+    created: new Date().toISOString()
   };
 }
 
@@ -480,11 +502,13 @@ app.post("/make-server-9063c65e/solve-problem", async (c) => {
     }
 
     const openaiKey = Deno.env.get("OPENAI_API_KEY");
+    const geminiKey = Deno.env.get("GEMINI_API_KEY") || Deno.env.get("GOOGLE_API_KEY");
 
     console.log("=== API Keys Check ===");
     console.log("OpenAI key present:", !!openaiKey);
     console.log("OpenAI key prefix:", openaiKey?.substring(0, 7));
     console.log("OpenAI key length:", openaiKey?.length);
+    console.log("Gemini key present:", !!geminiKey);
     console.log("======================");
 
     if (!openaiKey) {
@@ -919,9 +943,8 @@ ${VERIFICATION_PROTOCOL}`
             console.log(`All ${validationResult.validCount} steps contain proper calculations!`);
           }
 
-          // SKIP DALL-E diagram generation for faster initial response
-          // Diagrams can be generated on-demand later if needed
-          console.log("⚡ Skipping DALL-E diagram generation for faster response");
+          // Generate Gemini visual guides before returning the guided solution
+          console.log("Generating Gemini visual guides for guided steps");
 
           const stepsWithVisualGuides = await Promise.all(
             stepsWithDiagrams.map(async (step: any) => {
@@ -931,10 +954,18 @@ ${VERIFICATION_PROTOCOL}`
 
               const diagram = step.diagram?.trim() || buildFallbackDiagramDescription(step);
 
+              if (!geminiKey) {
+                return {
+                  ...step,
+                  diagram,
+                  diagramGenerated: false
+                };
+              }
+
               try {
                 const generatedDiagram = await generateDiagramImage(
                   buildStepDiagramPrompt(validatedQuestion, { ...step, diagram }),
-                  openaiKey
+                  geminiKey
                 );
 
                 return {
@@ -954,7 +985,7 @@ ${VERIFICATION_PROTOCOL}`
             })
           );
 
-          // Return the AI-generated guided solution with OpenAI metadata and DALL-E diagrams
+          // Return the AI-generated guided solution with OpenAI metadata and Gemini diagrams
           return c.json({
             solution: validatedSolution,
             strategy: validatedStrategy,
@@ -2577,87 +2608,53 @@ Use proper LaTeX notation for all mathematical expressions. For example:
 // Validate practice answer endpoint (without hints)
 app.post("/make-server-9063c65e/validate-practice-answer", validatePracticeAnswerHandler);
 
-// Generate diagram/figure using DALL-E
+// Generate diagram/figure using Gemini image generation
 app.post("/make-server-9063c65e/generate-diagram", async (c) => {
   try {
     const body = await c.req.json();
-    const { prompt, size = "1024x1024", quality = "standard" } = body;
+    const { prompt, concept, context, size = "1024x1024", quality = "standard" } = body;
+    const diagramPrompt = (prompt && prompt.trim())
+      ? prompt.trim()
+      : [
+          concept ? `Create a clean educational diagram for: ${concept}.` : "",
+          context ? `Context: ${context}` : "",
+          "Use a plain white background, crisp labels, and textbook-style clarity."
+        ].filter(Boolean).join("\n\n");
 
-    console.log("=== DALL-E DIAGRAM GENERATION REQUEST ===");
-    console.log("Prompt:", prompt);
+    console.log("=== GEMINI DIAGRAM GENERATION REQUEST ===");
+    console.log("Prompt:", diagramPrompt);
     console.log("Size:", size);
     console.log("Quality:", quality);
     console.log("========================================");
 
-    if (!prompt || !prompt.trim()) {
+    if (!diagramPrompt) {
       return c.json({ error: "Prompt is required" }, 400);
     }
 
-    const openaiKey = Deno.env.get("OPENAI_API_KEY");
+    const geminiKey = Deno.env.get("GEMINI_API_KEY") || Deno.env.get("GOOGLE_API_KEY");
 
-    if (!openaiKey) {
+    if (!geminiKey) {
       return c.json({
-        error: "No OpenAI API key configured. Please add OPENAI_API_KEY to Supabase secrets.",
+        error: "No Gemini API key configured. Please add GEMINI_API_KEY or GOOGLE_API_KEY to Supabase secrets.",
       }, 500);
     }
 
-    console.log("Calling DALL-E API...");
-    
-    const response = await fetch("https://api.openai.com/v1/images/generations", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${openaiKey}`
-      },
-      body: JSON.stringify({
-        model: "dall-e-3",
-        prompt: prompt,
-        n: 1,
-        size: size, // Options: "1024x1024", "1024x1792", "1792x1024"
-        quality: quality, // Options: "standard", "hd"
-        style: "natural" // Options: "natural", "vivid"
-      })
-    });
+    console.log("Calling Gemini image API...");
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error("DALL-E API error:", errorText);
-      
-      try {
-        const errorData = JSON.parse(errorText);
-        return c.json({
-          error: "Failed to generate image",
-          details: errorData.error?.message || errorText
-        }, response.status);
-      } catch {
-        return c.json({
-          error: "Failed to generate image",
-          details: errorText
-        }, response.status);
-      }
-    }
+    const result = await generateDiagramImage(diagramPrompt, geminiKey, size, quality);
 
-    const data = await response.json();
-    console.log("DALL-E image generated successfully");
-    
-    // DALL-E 3 returns the image URL in data[0].url
-    const imageUrl = data.data?.[0]?.url;
-    const revisedPrompt = data.data?.[0]?.revised_prompt; // DALL-E may revise the prompt
-
-    if (!imageUrl) {
-      console.error("No image URL in DALL-E response:", data);
-      return c.json({ error: "No image URL returned from DALL-E" }, 500);
-    }
-
-    console.log("Generated image URL:", imageUrl);
-    if (revisedPrompt) {
-      console.log("Revised prompt:", revisedPrompt);
+    console.log("Gemini image generated successfully");
+    console.log("Generated image URL length:", result.imageUrl?.length || 0);
+    if (result.revisedPrompt) {
+      console.log("Gemini text output:", result.revisedPrompt);
     }
 
     return c.json({
-      imageUrl: imageUrl,
-      revisedPrompt: revisedPrompt,
-      created: data.created
+      imageUrl: result.imageUrl,
+      revisedPrompt: result.revisedPrompt,
+      created: result.created,
+      concept: concept || prompt || "educational diagram",
+      provider: "gemini"
     });
 
   } catch (error) {

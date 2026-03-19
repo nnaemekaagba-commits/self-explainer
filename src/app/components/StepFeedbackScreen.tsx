@@ -6,7 +6,7 @@ import { MathRenderer } from './MathRenderer';
 interface ChatMessage {
   role: 'user' | 'ai';
   content: string;
-  diagram?: { svg: string; concept: string };
+  diagram?: { svg?: string; imageUrl?: string; concept: string };
 }
 
 interface StepFeedbackScreenProps {
@@ -29,7 +29,7 @@ interface StepFeedbackScreenProps {
     explanationFeedback?: string;
     answerImageUrl?: string;
     explanationImageUrl?: string;
-    diagram?: { svg: string; concept: string };
+    diagram?: { svg?: string; imageUrl?: string; concept: string };
   };
   onAIQueryUsed?: () => void;
   onChatMessagesChange?: (messages: ChatMessage[]) => void;
@@ -57,6 +57,7 @@ export const StepFeedbackScreen = ({
   
   const allCorrect = answerCorrect && explanationCorrect;
   const allWrong = !answerCorrect && !explanationCorrect;
+
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -254,7 +255,15 @@ export const StepFeedbackScreen = ({
               {feedbackData.diagram && (
                 <div className="mt-2 border border-gray-200 rounded p-2 bg-gray-50">
                   <p className="text-[8px] text-gray-600 mb-1">📊 Explanatory Diagram: {feedbackData.diagram.concept}</p>
-                  <div dangerouslySetInnerHTML={{ __html: feedbackData.diagram.svg }} className="w-full" />
+                  {feedbackData.diagram.imageUrl ? (
+                    <img
+                      src={feedbackData.diagram.imageUrl}
+                      alt={feedbackData.diagram.concept}
+                      className="w-full h-auto rounded border border-gray-200 bg-white"
+                    />
+                  ) : feedbackData.diagram.svg ? (
+                    <div dangerouslySetInnerHTML={{ __html: feedbackData.diagram.svg }} className="w-full" />
+                  ) : null}
                 </div>
               )}
             </div>
@@ -305,7 +314,15 @@ export const StepFeedbackScreen = ({
               {feedbackData.diagram && (
                 <div className="mt-2 border border-gray-200 rounded p-2 bg-gray-50">
                   <p className="text-[8px] text-gray-600 mb-1">📊 Explanatory Diagram: {feedbackData.diagram.concept}</p>
-                  <div dangerouslySetInnerHTML={{ __html: feedbackData.diagram.svg }} className="w-full" />
+                  {feedbackData.diagram.imageUrl ? (
+                    <img
+                      src={feedbackData.diagram.imageUrl}
+                      alt={feedbackData.diagram.concept}
+                      className="w-full h-auto rounded border border-gray-200 bg-white"
+                    />
+                  ) : feedbackData.diagram.svg ? (
+                    <div dangerouslySetInnerHTML={{ __html: feedbackData.diagram.svg }} className="w-full" />
+                  ) : null}
                 </div>
               )}
             </div>
@@ -338,7 +355,15 @@ export const StepFeedbackScreen = ({
                       {msg.diagram && (
                         <div className="mt-2 border border-gray-200 rounded p-2 bg-white">
                           <p className="text-[8px] text-gray-600 mb-1">📊 Diagram: {msg.diagram.concept}</p>
-                          <div dangerouslySetInnerHTML={{ __html: msg.diagram.svg }} className="w-full" />
+                          {msg.diagram.imageUrl ? (
+                            <img
+                              src={msg.diagram.imageUrl}
+                              alt={msg.diagram.concept}
+                              className="w-full h-auto rounded border border-gray-200 bg-white"
+                            />
+                          ) : msg.diagram.svg ? (
+                            <div dangerouslySetInnerHTML={{ __html: msg.diagram.svg }} className="w-full" />
+                          ) : null}
                         </div>
                       )}
                     </div>
@@ -428,7 +453,15 @@ export const StepFeedbackScreen = ({
                       {msg.diagram && (
                         <div className="mt-2 border border-gray-200 rounded p-2 bg-white">
                           <p className="text-[8px] text-gray-600 mb-1">📊 Diagram: {msg.diagram.concept}</p>
-                          <div dangerouslySetInnerHTML={{ __html: msg.diagram.svg }} className="w-full" />
+                          {msg.diagram.imageUrl ? (
+                            <img
+                              src={msg.diagram.imageUrl}
+                              alt={msg.diagram.concept}
+                              className="w-full h-auto rounded border border-gray-200 bg-white"
+                            />
+                          ) : msg.diagram.svg ? (
+                            <div dangerouslySetInnerHTML={{ __html: msg.diagram.svg }} className="w-full" />
+                          ) : null}
                         </div>
                       )}
                     </div>
