@@ -196,8 +196,20 @@ function aggressivelyUnescapeLatex(raw: string): string {
   return fixed;
 }
 
+function repairLatexDelimiters(raw: string): string {
+  let fixed = raw;
+
+  fixed = fixed
+    .replace(/(^|[\n\r]\s*)(\\(?:sum|frac|sqrt|theta|alpha|beta|gamma|delta|lambda|mu|sigma|omega|sin|cos|tan)\b[\s\S]*?\\\))/g, '$1\\($2')
+    .replace(/(^|[\n\r]\s*)(\\sum\s+F_[xy]\s*=\s*0\s*[:=]\s*)/g, '$1\\($2\\)')
+    .replace(/(^|[\n\r]\s*)(\\sum\s+M_?[A-Za-z]?\s*=\s*0\s*[:=]\s*)/g, '$1\\($2\\)')
+    .replace(/\b(we have|the equations become|this gives|therefore)\s+=\s+/gi, '$1 ');
+
+  return fixed;
+}
+
 function normalizeContent(raw: string): string {
-  return aggressivelyUnescapeLatex(fixBrokenSymbols(raw))
+  return repairLatexDelimiters(aggressivelyUnescapeLatex(fixBrokenSymbols(raw)))
     .replace(/```(?:latex|math)?\s*([\s\S]*?)```/gi, '$1')
     .replace(/\\\$/g, '$')
     .replace(/&nbsp;/gi, ' ')
@@ -300,8 +312,6 @@ function sanitizeLatexExpression(expression: string): string {
     .replace(/\\([A-Za-z]+)\)/g, '\\$1)')
     .replace(/\\([A-Za-z]+)\]/g, '\\$1]')
     .replace(/\{\s*([A-Za-z]{1,4})\s*\}/g, '{$1}')
-    .replace(/\s*:\s*/g, ' = ')
-    .replace(/\\sum\s+F_([xy])\s*=\s*0\s*=\s*/g, '\\sum F_$1 = ')
     .replace(/\\sum\s+F_([xy])\s*=\s*0\s*:/g, '\\sum F_$1 = ')
     .replace(/\\sum\s+M_?([A-Za-z])\s*=\s*0\s*:/g, '\\sum M_$1 = ')
     .replace(/\\left\(/g, '(')
@@ -424,6 +434,9 @@ function looksLikeDisplayMathLine(line: string): boolean {
   if (!trimmed) return false;
   if ((trimmed.startsWith('\\[') && trimmed.endsWith('\\]')) || (trimmed.startsWith('$$') && trimmed.endsWith('$$'))) {
     return true;
+  }
+  if ((trimmed.match(/\\\(/g) || []).length > 1) {
+    return false;
   }
 
   const hasMathMarkers =
