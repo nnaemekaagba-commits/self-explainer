@@ -271,6 +271,80 @@ Repair any step that is missing units, missing equations, using the wrong type o
   }
 }
 
+function shouldGenerateVisualGuide(step: any): boolean {
+  const combined = `${step?.title || ""} ${step?.description || ""} ${step?.formula || ""} ${step?.diagram || ""}`.toLowerCase();
+  return Boolean(step?.diagram?.trim()) || /\b(force|free body|vector|circuit|geometry|angle|component|beam|truss|joint|moment|torque|graph|diagram|rod|block|support|reaction)\b/.test(combined);
+}
+
+function buildFallbackDiagramDescription(step: any): string {
+  const title = step?.title || "problem step";
+  const description = step?.description || "";
+  const formula = step?.formula || "";
+  return `Educational diagram for "${title}". Show the objects, labels, axes, key quantities, and the relationship described here: ${description}. Include these equations or symbols as labels where helpful: ${formula}.`;
+}
+
+function buildStepDiagramPrompt(problemQuestion: string, step: any): string {
+  const diagramDescription = step?.diagram?.trim() || buildFallbackDiagramDescription(step);
+  return `Create a clean educational engineering/math diagram on a plain white background.
+
+Overall problem:
+${problemQuestion}
+
+Current step:
+Title: ${step?.title || "Guided step"}
+Description: ${step?.description || ""}
+Formula: ${step?.formula || ""}
+Requested visual guide:
+${diagramDescription}
+
+Requirements:
+- Create a neat textbook-style diagram, not artistic illustration
+- Use crisp lines, arrows, labels, dimensions, coordinate axes, and symbols where appropriate
+- Keep the layout uncluttered and easy for a student to learn from
+- If it is a mechanics/statics problem, prefer a free-body diagram style
+- If it is a circuit problem, use standard circuit-symbol layout
+- If it is geometry/algebra/calculus, show the relevant graph, shape, axes, or labeled relationship
+- Use black, gray, and subtle accent colors only
+- No decorative background, no photorealism, no extra objects, no watermark`;
+}
+
+async function generateDiagramImage(prompt: string, openaiKey: string, size = "1024x1024", quality = "standard") {
+  const response = await fetch("https://api.openai.com/v1/images/generations", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${openaiKey}`
+    },
+    body: JSON.stringify({
+      model: "dall-e-3",
+      prompt,
+      n: 1,
+      size,
+      quality,
+      style: "natural"
+    })
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`DALL-E generation failed: ${errorText}`);
+  }
+
+  const data = await response.json();
+  const imageUrl = data.data?.[0]?.url;
+  const revisedPrompt = data.data?.[0]?.revised_prompt;
+
+  if (!imageUrl) {
+    throw new Error("No image URL returned from DALL-E");
+  }
+
+  return {
+    imageUrl,
+    revisedPrompt,
+    created: data.created
+  };
+}
+
 // Health check endpoint
 app.get("/make-server-9063c65e/health", (c) => {
   return c.json({ status: "ok", timestamp: new Date().toISOString() });
@@ -849,12 +923,43 @@ ${VERIFICATION_PROTOCOL}`
           // Diagrams can be generated on-demand later if needed
           console.log("⚡ Skipping DALL-E diagram generation for faster response");
 
+          const stepsWithVisualGuides = await Promise.all(
+            stepsWithDiagrams.map(async (step: any) => {
+              if (!shouldGenerateVisualGuide(step)) {
+                return step;
+              }
+
+              const diagram = step.diagram?.trim() || buildFallbackDiagramDescription(step);
+
+              try {
+                const generatedDiagram = await generateDiagramImage(
+                  buildStepDiagramPrompt(validatedQuestion, { ...step, diagram }),
+                  openaiKey
+                );
+
+                return {
+                  ...step,
+                  diagram,
+                  diagramUrl: generatedDiagram.imageUrl,
+                  diagramGenerated: true
+                };
+              } catch (diagramError) {
+                console.error(`Failed to generate diagram for step ${step.stepNumber || "unknown"}:`, diagramError);
+                return {
+                  ...step,
+                  diagram,
+                  diagramGenerated: false
+                };
+              }
+            })
+          );
+
           // Return the AI-generated guided solution with OpenAI metadata and DALL-E diagrams
           return c.json({
             solution: validatedSolution,
             strategy: validatedStrategy,
             extractedQuestion: validatedQuestion,
-            steps: stepsWithDiagrams,
+            steps: stepsWithVisualGuides,
             diagram: null, // Legacy field - diagrams are now per-step
             // OpenAI API metadata
             promptId: data.id || null,

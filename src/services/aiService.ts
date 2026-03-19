@@ -13,6 +13,9 @@ interface SolveProblemResponse {
     description: string;
     hint: string;
     formula: string;
+    diagram?: string;
+    diagramUrl?: string;
+    diagramGenerated?: boolean;
   }>;
   extractedQuestion?: string;
   diagram?: {
