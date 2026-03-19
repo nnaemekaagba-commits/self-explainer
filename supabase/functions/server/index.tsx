@@ -369,19 +369,31 @@ function buildFallbackDiagramDescription(step: any): string {
   const title = step?.title || "problem step";
   const description = step?.description || "";
   const formula = step?.formula || "";
-  return `Educational diagram for "${title}". Show the objects, labels, axes, key quantities, and the relationship described here: ${description}. Include these equations or symbols as labels where helpful: ${formula}.`;
+  return `For the step "${title}", draw only the objects and relationships needed for this step. Show the physical elements, supports, forces, member labels, dimensions, axes, and directions described here: ${description}. Use symbols from this equation only as labels where relevant: ${formula}.`;
+}
+
+function buildDiagramContextSummary(problemQuestion: string, topicInfo?: any, problemTraining?: any): string {
+  const keyTerms = Array.isArray(topicInfo?.keyTerms) ? topicInfo.keyTerms.slice(0, 6).join(", ") : "";
+  const givens = Array.isArray(problemTraining?.givens) ? problemTraining.givens.slice(0, 4).join("; ") : "";
+  const visualFocus = Array.isArray(problemTraining?.visualFocus) ? problemTraining.visualFocus.slice(0, 4).join("; ") : "";
+  const pitfalls = Array.isArray(problemTraining?.pitfalls) ? problemTraining.pitfalls.slice(0, 3).join("; ") : "";
+
+  return [
+    `Problem: ${problemQuestion}`,
+    topicInfo?.domain ? `Domain: ${topicInfo.domain}${topicInfo?.subDomain ? ` / ${topicInfo.subDomain}` : ""}` : "",
+    keyTerms ? `Key terms: ${keyTerms}` : "",
+    givens ? `Important givens: ${givens}` : "",
+    visualFocus ? `What the figure must show: ${visualFocus}` : "",
+    pitfalls ? `Avoid: ${pitfalls}` : "",
+  ].filter(Boolean).join("\n");
 }
 
 function buildStepDiagramPrompt(problemQuestion: string, step: any, topicInfo?: any, problemTraining?: any): string {
   const diagramDescription = step?.diagram?.trim() || buildFallbackDiagramDescription(step);
-  return `Create a clean educational engineering/math diagram on a plain white background.
+  const contextSummary = buildDiagramContextSummary(problemQuestion, topicInfo, problemTraining);
+  return `Create one clean textbook-style educational diagram on a plain white background.
 
-Overall problem:
-${problemQuestion}
-
-${buildTopicGuidance(topicInfo)}
-
-${buildProblemTrainingGuidance(problemTraining)}
+${contextSummary}
 
 Current step:
 Title: ${step?.title || "Guided step"}
@@ -391,14 +403,14 @@ Requested visual guide:
 ${diagramDescription}
 
 Requirements:
-- Create a neat textbook-style diagram, not artistic illustration
-- Use crisp lines, arrows, labels, dimensions, coordinate axes, and symbols where appropriate
-- Keep the layout uncluttered and easy for a student to learn from
-- If it is a mechanics/statics problem, prefer a free-body diagram style
-- If it is a circuit problem, use standard circuit-symbol layout
-- If it is geometry/algebra/calculus, show the relevant graph, shape, axes, or labeled relationship
-- Use black, gray, and subtle accent colors only
-- No decorative background, no photorealism, no extra objects, no watermark`;
+- Match the actual problem context exactly. Do not invent extra objects, forces, dimensions, supports, or geometry.
+- Use crisp lines, arrows, labels, dimensions, coordinate axes, and symbols only where they belong.
+- If it is statics or mechanics, prefer a free-body diagram or structural sketch.
+- If it is a circuit, use standard circuit symbols and label current/voltage directions clearly.
+- If it is geometry/algebra/calculus, show only the relevant graph, axes, shape, or labeled relationship.
+- Keep the image uncluttered, legible, and professional.
+- Use black, gray, and subtle accent colors only.
+- No decorative background, no photorealism, no watermark, no cartoon style.`;
 }
 
 async function generateDiagramImage(prompt: string, geminiKey: string, size = "1024x1024", quality = "standard") {
@@ -2745,11 +2757,18 @@ app.post("/make-server-9063c65e/generate-diagram", async (c) => {
 
     const diagramTopicInfo = openaiKey ? await identifyProblemTopic(diagramPrompt, openaiKey) : null;
     const diagramTraining = openaiKey ? await buildProblemTrainingBrief(diagramPrompt, openaiKey, diagramTopicInfo) : null;
-    const enrichedDiagramPrompt = `${diagramPrompt}
+    const enrichedDiagramPrompt = `Create one clean problem-specific educational diagram.
 
-${buildTopicGuidance(diagramTopicInfo)}
+${buildDiagramContextSummary(diagramPrompt, diagramTopicInfo, diagramTraining)}
 
-${buildProblemTrainingGuidance(diagramTraining)}`;
+Requested diagram:
+${diagramPrompt}
+
+Requirements:
+- Stay faithful to the requested problem context.
+- Prefer textbook clarity over artistic style.
+- Show only the needed objects, labels, arrows, dimensions, and symbols.
+- No extra scenery, no decoration, no photorealism.`;
 
     const result = await generateDiagramImage(enrichedDiagramPrompt, geminiKey, size, quality);
 

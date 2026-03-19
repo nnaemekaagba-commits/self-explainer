@@ -210,6 +210,11 @@ function repairLatexDelimiters(raw: string): string {
 
 function normalizeContent(raw: string): string {
   return repairLatexDelimiters(aggressivelyUnescapeLatex(fixBrokenSymbols(raw)))
+    .replace(/\\imes\b/g, '\\times')
+    .replace(/\\ext\b/g, '\\text')
+    .replace(/\\cd\b/g, '\\cdot')
+    .replace(/(^|[^\\])imes\b/g, '$1\\times')
+    .replace(/(^|[^\\])ext\{/g, '$1\\text{')
     .replace(/\\t(?=imes|ext)/g, '\\')
     .replace(/\t(?=imes|ext)/g, '\\')
     .replace(/```(?:latex|math)?\s*([\s\S]*?)```/gi, '$1')
@@ -299,6 +304,9 @@ function normalizePlainMathExpression(expression: string): string {
 
 function sanitizeLatexExpression(expression: string): string {
   let sanitized = normalizeContent(expression.trim())
+    .replace(/\\imes\b/g, '\\times')
+    .replace(/\\ext\b/g, '\\text')
+    .replace(/\\cd\b/g, '\\cdot')
     .replace(/\\thet(?![a-zA-Z])/g, '\\theta')
     .replace(/\\alph(?![a-zA-Z])/g, '\\alpha')
     .replace(/\\bet(?![a-zA-Z])/g, '\\beta')
@@ -320,7 +328,8 @@ function sanitizeLatexExpression(expression: string): string {
     .replace(/\\right\)/g, ')')
     .replace(/\\left\[/g, '[')
     .replace(/\\right\]/g, ']')
-    .replace(/\\,/g, '\\,');
+    .replace(/\\,/g, '\\,')
+    .replace(/([A-Za-z}])\s+\\times\s+([A-Za-z0-9\\])/g, '$1 \\times $2');
 
   if (sanitized.startsWith('\\(') && sanitized.endsWith('\\)')) {
     sanitized = sanitized.slice(2, -2).trim();
