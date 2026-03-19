@@ -465,7 +465,24 @@ function extractStandaloneMath(line: string): { value: string; raw: string } {
     return { value: trimmed.slice(2, -2).trim(), raw: trimmed };
   }
 
+  if (/\\[A-Za-z]+|_\{[^}]+\}|\^\{[^}]+\}/.test(trimmed)) {
+    return { value: sanitizeLatexExpression(trimmed), raw: trimmed };
+  }
+
   return { value: normalizePlainMathExpression(trimmed), raw: trimmed };
+}
+
+function shouldTreatAsDisplayMathLine(line: string): boolean {
+  const trimmed = line.trim();
+  if (looksLikeDisplayMathLine(trimmed)) {
+    return true;
+  }
+
+  const proseView = trimmed.replace(/\\[A-Za-z]+/g, ' ').replace(/[{}_^]/g, ' ');
+  const proseWordCount = (proseView.match(/\b[A-Za-z]{4,}\b/g) || []).length;
+  const hasLatexStructure = /\\[A-Za-z]+/.test(trimmed) && /[=_^{}]/.test(trimmed);
+
+  return hasLatexStructure && trimmed.includes('=') && proseWordCount <= 3 && trimmed.length <= 220;
 }
 
 function buildBlocks(rawContent: string): Block[] {
@@ -505,7 +522,7 @@ function buildBlocks(rawContent: string): Block[] {
       return;
     }
 
-    if (looksLikeDisplayMathLine(trimmed)) {
+    if (shouldTreatAsDisplayMathLine(trimmed)) {
       flushParagraph();
       flushList();
       const math = extractStandaloneMath(trimmed);
