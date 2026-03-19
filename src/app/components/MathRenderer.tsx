@@ -173,8 +173,31 @@ function fixBrokenSymbols(raw: string): string {
   }, raw);
 }
 
+function aggressivelyUnescapeLatex(raw: string): string {
+  let fixed = raw;
+  let previous = '';
+  let iterations = 0;
+
+  while (fixed !== previous && iterations < 6) {
+    previous = fixed;
+    fixed = fixed
+      .replace(/\\\\\(/g, '\\(')
+      .replace(/\\\\\)/g, '\\)')
+      .replace(/\\\\\[/g, '\\[')
+      .replace(/\\\\\]/g, '\\]')
+      .replace(/\\\\([A-Za-z])/g, '\\$1')
+      .replace(/\\\\,/g, '\\,')
+      .replace(/\\\\;/g, '\\;')
+      .replace(/\\\\:/g, '\\:')
+      .replace(/\\\\!/g, '\\!');
+    iterations++;
+  }
+
+  return fixed;
+}
+
 function normalizeContent(raw: string): string {
-  return fixBrokenSymbols(raw)
+  return aggressivelyUnescapeLatex(fixBrokenSymbols(raw))
     .replace(/```(?:latex|math)?\s*([\s\S]*?)```/gi, '$1')
     .replace(/\\\$/g, '$')
     .replace(/&nbsp;/gi, ' ')
