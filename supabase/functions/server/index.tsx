@@ -109,6 +109,94 @@ function buildTopicGuidance(topicInfo: any): string {
 Use this context to choose the correct governing equations, vocabulary, units, and verification checks.`;
 }
 
+async function buildProblemTrainingBrief(question: string, openaiKey: string, topicInfo?: any): Promise<any> {
+  if (!question?.trim()) return null;
+
+  console.log("Building problem training brief...");
+
+  try {
+    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${openaiKey}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        model: "gpt-4o-mini",
+        response_format: { type: "json_object" },
+        temperature: 0.1,
+        max_tokens: 500,
+        messages: [
+          {
+            role: "system",
+            content: `You are preparing a tutoring system before it solves a problem.
+Return a JSON object with these keys:
+- objective: short sentence describing what the problem is asking for
+- givens: array of the stated or implied known quantities/conditions
+- unknowns: array of the quantities to solve for
+- governingPrinciples: array of equations, laws, or ideas that should control the solution
+- visualFocus: array of the most important features a diagram should show
+- solvingPlan: array of 3 to 5 short step intentions
+- pitfalls: array of likely mistakes or assumptions to avoid
+
+Be concrete, domain-aware, and conservative. Do not invent missing geometry or data.`
+          },
+          {
+            role: "user",
+            content: JSON.stringify({
+              question,
+              topicInfo
+            })
+          }
+        ]
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(await response.text());
+    }
+
+    const data = await response.json();
+    const brief = JSON.parse(data.choices[0].message.content);
+    console.log("Problem training brief created:", brief);
+    return brief;
+  } catch (error) {
+    console.error("Failed to build problem training brief:", error);
+    return null;
+  }
+}
+
+function buildProblemTrainingGuidance(problemTraining: any): string {
+  if (!problemTraining) return "";
+
+  const formatList = (value: unknown, fallback: string) => {
+    if (!Array.isArray(value) || value.length === 0) return fallback;
+    return value.map((item) => `- ${String(item)}`).join("\n");
+  };
+
+  return `QUICK TRAINING BRIEF:
+Objective:
+- ${problemTraining.objective || "Understand the exact target quantity before solving."}
+
+Known / given information:
+${formatList(problemTraining.givens, "- Extract givens directly from the problem statement before substituting.")}
+
+Unknowns to solve for:
+${formatList(problemTraining.unknowns, "- Keep the target variable explicit throughout the steps.")}
+
+Governing principles:
+${formatList(problemTraining.governingPrinciples, "- Use the governing equations that naturally fit the domain.")}
+
+Visual focus for any figure:
+${formatList(problemTraining.visualFocus, "- Show the key objects, labels, axes, forces, and known dimensions.")}
+
+Suggested solving plan:
+${formatList(problemTraining.solvingPlan, "- Move from setup to substitution to the final student-completion step.")}
+
+Pitfalls to avoid:
+${formatList(problemTraining.pitfalls, "- Do not invent missing information or skip validation checks.")}`;
+}
+
 function buildDomainSpecificScaffoldRules(question: string, topicInfo: any): string {
   const combined = `${(question || "").toLowerCase()} ${(topicInfo?.domain || "").toLowerCase()} ${(topicInfo?.subDomain || "").toLowerCase()}`;
 
@@ -199,7 +287,7 @@ function explanationLooksReasonable(text: string): boolean {
   return /\b(because|so|therefore|using|apply|substitute|divide|multiply|equilibrium|force|moment|formula|equation|simplify|isolate|component|direction)\b/.test(normalized);
 }
 
-async function repairScaffoldedStepsWithAI(question: string, steps: any[], openaiKey: string, topicInfo?: any) {
+async function repairScaffoldedStepsWithAI(question: string, steps: any[], openaiKey: string, topicInfo?: any, problemTraining?: any) {
   const invalidReport = validateStepsHaveCalculations(steps);
   const qualityReport = assessSolutionQuality(question, steps, topicInfo);
   if (invalidReport.allValid && qualityReport.allValid) {
@@ -244,9 +332,10 @@ For every step:
               qualityIssues: qualityReport.issues,
               steps,
               instructions: `${buildTopicGuidance(topicInfo)}
-${buildDomainSpecificScaffoldRules(question, topicInfo)}
-
-Repair any step that is missing units, missing equations, using the wrong type of terminology, or giving away the answer in the hint.`
+${buildProblemTrainingGuidance(problemTraining)}
+ ${buildDomainSpecificScaffoldRules(question, topicInfo)}
+ 
+ Repair any step that is missing units, missing equations, using the wrong type of terminology, or giving away the answer in the hint.`
             })
           }
         ]
@@ -283,12 +372,16 @@ function buildFallbackDiagramDescription(step: any): string {
   return `Educational diagram for "${title}". Show the objects, labels, axes, key quantities, and the relationship described here: ${description}. Include these equations or symbols as labels where helpful: ${formula}.`;
 }
 
-function buildStepDiagramPrompt(problemQuestion: string, step: any): string {
+function buildStepDiagramPrompt(problemQuestion: string, step: any, topicInfo?: any, problemTraining?: any): string {
   const diagramDescription = step?.diagram?.trim() || buildFallbackDiagramDescription(step);
   return `Create a clean educational engineering/math diagram on a plain white background.
 
 Overall problem:
 ${problemQuestion}
+
+${buildTopicGuidance(topicInfo)}
+
+${buildProblemTrainingGuidance(problemTraining)}
 
 Current step:
 Title: ${step?.title || "Guided step"}
@@ -519,8 +612,10 @@ app.post("/make-server-9063c65e/solve-problem", async (c) => {
     }
 
     let topicInfo = null;
+    let problemTraining = null;
     if (question && question.trim()) {
       topicInfo = await identifyProblemTopic(question, openaiKey);
+      problemTraining = await buildProblemTrainingBrief(question, openaiKey, topicInfo);
     }
     console.log(`Using OpenAI API with topic context:`, topicInfo || "none");
 
@@ -550,7 +645,7 @@ app.post("/make-server-9063c65e/solve-problem", async (c) => {
           }
           
           // ADD CRITICAL REQUIREMENTS TO USER MESSAGE
-          userPrompt += `\n\n${buildTopicGuidance(topicInfo)}\n\n${CORRECTNESS_MANDATE}\n\n${LATEX_PROFESSIONAL_STANDARDS}\n\n${SIMPLE_REMINDER}\n\n${VERIFICATION_PROTOCOL}`;
+          userPrompt += `\n\n${buildTopicGuidance(topicInfo)}\n\n${buildProblemTrainingGuidance(problemTraining)}\n\n${CORRECTNESS_MANDATE}\n\n${LATEX_PROFESSIONAL_STANDARDS}\n\n${SIMPLE_REMINDER}\n\n${VERIFICATION_PROTOCOL}`;
           
           console.log("OCR Mode:", hasAdditionalText ? "Image + Text" : "Image Only");
           
@@ -620,6 +715,8 @@ MANDATORY LaTeX NOTATION RULES:
               content: `Create a guided solution for this problem: ${question}
 
 ${buildTopicGuidance(topicInfo)}
+
+${buildProblemTrainingGuidance(problemTraining)}
 
 ${CORRECTNESS_MANDATE}
 
@@ -845,6 +942,10 @@ ${VERIFICATION_PROTOCOL}`
           const validatedSolution = validateAndFixLatex(fixMissingSpaces(parsed.solution || "Guided solution created"));
           const validatedStrategy = validateAndFixLatex(fixMissingSpaces(parsed.strategy || "Follow the hints for each step"));
           const validatedQuestion = validateAndFixLatex(fixMissingSpaces(parsed.extractedQuestion || question));
+
+          if (validatedQuestion && (!problemTraining || imageUrl || validatedQuestion !== question)) {
+            problemTraining = await buildProblemTrainingBrief(validatedQuestion, openaiKey, topicInfo);
+          }
           
           // Log extracted question from image
           if (imageUrl && parsed.extractedQuestion) {
@@ -915,7 +1016,7 @@ ${VERIFICATION_PROTOCOL}`
             });
             console.error("Attempting one repair pass to add worked calculations...");
 
-            const repairedSteps = await repairScaffoldedStepsWithAI(validatedQuestion, enhancedSteps, openaiKey, topicInfo);
+            const repairedSteps = await repairScaffoldedStepsWithAI(validatedQuestion, enhancedSteps, openaiKey, topicInfo, problemTraining);
             stepsWithDiagrams = repairedSteps.map((step: any, index: number) => ({
               ...step,
               title: validateAndFixLatex(fixMissingSpaces(step.title || enhancedSteps[index]?.title || "")),
@@ -964,7 +1065,7 @@ ${VERIFICATION_PROTOCOL}`
 
               try {
                 const generatedDiagram = await generateDiagramImage(
-                  buildStepDiagramPrompt(validatedQuestion, { ...step, diagram }),
+                  buildStepDiagramPrompt(validatedQuestion, { ...step, diagram }, topicInfo, problemTraining),
                   geminiKey
                 );
 
@@ -2631,6 +2732,7 @@ app.post("/make-server-9063c65e/generate-diagram", async (c) => {
       return c.json({ error: "Prompt is required" }, 400);
     }
 
+    const openaiKey = Deno.env.get("OPENAI_API_KEY");
     const geminiKey = Deno.env.get("GEMINI_API_KEY") || Deno.env.get("GOOGLE_API_KEY");
 
     if (!geminiKey) {
@@ -2641,7 +2743,15 @@ app.post("/make-server-9063c65e/generate-diagram", async (c) => {
 
     console.log("Calling Gemini image API...");
 
-    const result = await generateDiagramImage(diagramPrompt, geminiKey, size, quality);
+    const diagramTopicInfo = openaiKey ? await identifyProblemTopic(diagramPrompt, openaiKey) : null;
+    const diagramTraining = openaiKey ? await buildProblemTrainingBrief(diagramPrompt, openaiKey, diagramTopicInfo) : null;
+    const enrichedDiagramPrompt = `${diagramPrompt}
+
+${buildTopicGuidance(diagramTopicInfo)}
+
+${buildProblemTrainingGuidance(diagramTraining)}`;
+
+    const result = await generateDiagramImage(enrichedDiagramPrompt, geminiKey, size, quality);
 
     console.log("Gemini image generated successfully");
     console.log("Generated image URL length:", result.imageUrl?.length || 0);
