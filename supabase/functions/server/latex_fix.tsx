@@ -21,7 +21,9 @@ const BROKEN_SYMBOL_MAP: Array<[string, string]> = [
 function normalizeBrokenSymbols(text: string): string {
   return BROKEN_SYMBOL_MAP.reduce((fixed, [broken, replacement]) => {
     return fixed.replaceAll(broken, replacement);
-  }, text);
+  }, text)
+    .replace(/\\t(?=imes|ext)/g, '\\')
+    .replace(/\t(?=imes|ext)/g, '\\');
 }
 
 function repairMalformedLatex(text: string): string {

@@ -210,6 +210,8 @@ function repairLatexDelimiters(raw: string): string {
 
 function normalizeContent(raw: string): string {
   return repairLatexDelimiters(aggressivelyUnescapeLatex(fixBrokenSymbols(raw)))
+    .replace(/\\t(?=imes|ext)/g, '\\')
+    .replace(/\t(?=imes|ext)/g, '\\')
     .replace(/```(?:latex|math)?\s*([\s\S]*?)```/gi, '$1')
     .replace(/\\\$/g, '$')
     .replace(/&nbsp;/gi, ' ')
