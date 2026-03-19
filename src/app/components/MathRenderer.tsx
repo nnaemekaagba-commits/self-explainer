@@ -283,6 +283,44 @@ function normalizePlainMathExpression(expression: string): string {
   return normalized.replace(/\s+/g, ' ').trim();
 }
 
+function sanitizeLatexExpression(expression: string): string {
+  let sanitized = normalizeContent(expression.trim())
+    .replace(/\\thet(?![a-zA-Z])/g, '\\theta')
+    .replace(/\\alph(?![a-zA-Z])/g, '\\alpha')
+    .replace(/\\bet(?![a-zA-Z])/g, '\\beta')
+    .replace(/\\gamm(?![a-zA-Z])/g, '\\gamma')
+    .replace(/\\delt(?![a-zA-Z])/g, '\\delta')
+    .replace(/\\lambd(?![a-zA-Z])/g, '\\lambda')
+    .replace(/\\sigm(?![a-zA-Z])/g, '\\sigma')
+    .replace(/\\omeg(?![a-zA-Z])/g, '\\omega')
+    .replace(/\\ph(?![a-zA-Z])/g, '\\phi')
+    .replace(/\\epsilo(?![a-zA-Z])/g, '\\epsilon')
+    .replace(/\\([A-Za-z]+)\{/g, '\\$1{')
+    .replace(/\\([A-Za-z]+)\(/g, '\\$1(')
+    .replace(/\\([A-Za-z]+)\)/g, '\\$1)')
+    .replace(/\\([A-Za-z]+)\]/g, '\\$1]')
+    .replace(/\{\s*([A-Za-z]{1,4})\s*\}/g, '{$1}')
+    .replace(/\s*:\s*/g, ' = ')
+    .replace(/\\sum\s+F_([xy])\s*=\s*0\s*=\s*/g, '\\sum F_$1 = ')
+    .replace(/\\sum\s+F_([xy])\s*=\s*0\s*:/g, '\\sum F_$1 = ')
+    .replace(/\\sum\s+M_?([A-Za-z])\s*=\s*0\s*:/g, '\\sum M_$1 = ')
+    .replace(/\\left\(/g, '(')
+    .replace(/\\right\)/g, ')')
+    .replace(/\\left\[/g, '[')
+    .replace(/\\right\]/g, ']')
+    .replace(/\\,/g, '\\,');
+
+  if (sanitized.startsWith('\\(') && sanitized.endsWith('\\)')) {
+    sanitized = sanitized.slice(2, -2).trim();
+  }
+
+  if (sanitized.startsWith('\\[') && sanitized.endsWith('\\]')) {
+    sanitized = sanitized.slice(2, -2).trim();
+  }
+
+  return sanitized.replace(/\s+/g, ' ').trim();
+}
+
 function prettifyPlainText(text: string): string {
   return text
     .replace(/>=/g, '≥')
@@ -531,19 +569,32 @@ function findInlineEquationRanges(text: string): Array<{ start: number; end: num
 
 function renderMathIntoElement(container: HTMLElement, value: string, raw: string, displayMode: boolean) {
   container.className = displayMode ? 'math-display-block' : 'math-inline-block';
+  const sanitizedValue = sanitizeLatexExpression(value);
 
   try {
-    katex.render(value, container, {
+    katex.render(sanitizedValue, container, {
       displayMode,
-      throwOnError: false,
+      throwOnError: true,
       strict: false,
       trust: true,
       output: 'htmlAndMathml',
     });
   } catch (error) {
-    console.error('KaTeX render error:', error);
-    container.textContent = raw;
-    container.className += ' math-render-fallback';
+    try {
+      const normalizedValue = normalizePlainMathExpression(sanitizedValue);
+      katex.render(normalizedValue, container, {
+        displayMode,
+        throwOnError: true,
+        strict: false,
+        trust: true,
+        output: 'htmlAndMathml',
+      });
+    } catch (retryError) {
+      console.error('KaTeX render error:', error);
+      console.error('KaTeX retry error:', retryError);
+      container.textContent = prettifyPlainText(sanitizeLatexExpression(raw));
+      container.className += ' math-render-fallback';
+    }
   }
 }
 

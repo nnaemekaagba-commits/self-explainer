@@ -24,8 +24,28 @@ function normalizeBrokenSymbols(text: string): string {
   }, text);
 }
 
+function repairMalformedLatex(text: string): string {
+  return text
+    .replace(/\\thet(?![a-zA-Z])/g, '\\theta')
+    .replace(/\\alph(?![a-zA-Z])/g, '\\alpha')
+    .replace(/\\bet(?![a-zA-Z])/g, '\\beta')
+    .replace(/\\gamm(?![a-zA-Z])/g, '\\gamma')
+    .replace(/\\delt(?![a-zA-Z])/g, '\\delta')
+    .replace(/\\lambd(?![a-zA-Z])/g, '\\lambda')
+    .replace(/\\sigm(?![a-zA-Z])/g, '\\sigma')
+    .replace(/\\omeg(?![a-zA-Z])/g, '\\omega')
+    .replace(/\\ph(?![a-zA-Z])/g, '\\phi')
+    .replace(/\\epsilo(?![a-zA-Z])/g, '\\epsilon')
+    .replace(/\\([A-Za-z]+)\{/g, '\\$1{')
+    .replace(/\\([A-Za-z]+)\(/g, '\\$1(')
+    .replace(/\\([A-Za-z]+)\)/g, '\\$1)')
+    .replace(/\\sum\s+F_([xy])\s*=\s*0\s*:/g, '\\sum F_$1 = ')
+    .replace(/\\sum\s+M_?([A-Za-z])\s*=\s*0\s*:/g, '\\sum M_$1 = ')
+    .replace(/\s*:\s*/g, ' = ');
+}
+
 function fixMathContent(mathContent: string): string {
-  let fixed = normalizeBrokenSymbols(mathContent);
+  let fixed = repairMalformedLatex(normalizeBrokenSymbols(mathContent));
 
   fixed = fixed.replace(/\bsum([A-Z_])/g, '\\sum $1');
   fixed = fixed.replace(/\bSum([A-Z_])/g, '\\sum $1');
@@ -50,6 +70,7 @@ function fixMathContent(mathContent: string): string {
   fixed = fixed.replace(/√\s*([A-Za-z0-9]+)/g, '\\sqrt{$1}');
   fixed = fixed.replace(/π/g, '\\pi ');
 
+  fixed = repairMalformedLatex(fixed);
   return fixed.replace(/[ \t]+/g, ' ').trim();
 }
 
@@ -88,7 +109,7 @@ export function wrapUnwrappedLatex(text: string): string {
 export function validateAndFixLatex(text: string): string {
   if (!text) return text;
 
-  let fixed = normalizeBrokenSymbols(text);
+  let fixed = repairMalformedLatex(normalizeBrokenSymbols(text));
 
   let iterations = 0;
   while (fixed.includes('\\\\') && iterations < 10) {
