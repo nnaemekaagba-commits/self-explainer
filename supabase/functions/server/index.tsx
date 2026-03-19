@@ -109,6 +109,29 @@ function buildTopicGuidance(topicInfo: any): string {
 Use this context to choose the correct governing equations, vocabulary, units, and verification checks.`;
 }
 
+function buildDomainSpecificScaffoldRules(question: string, topicInfo: any): string {
+  const combined = `${(question || "").toLowerCase()} ${(topicInfo?.domain || "").toLowerCase()} ${(topicInfo?.subDomain || "").toLowerCase()}`;
+
+  if (/\b(statics|truss|joint|member|support|reaction|equilibrium|free body|moment)\b/.test(combined)) {
+    return `STATICS / TRUSS RULES:
+- Start from a free-body diagram or joint equilibrium statement.
+- Use explicit equilibrium equations such as \\[\\sum F_x = 0\\], \\[\\sum F_y = 0\\], or \\[\\sum M_A = 0\\].
+- For inclined members, resolve forces with \\(\\cos(\\theta)\\) and \\(\\sin(\\theta)\\) using proper LaTeX.
+- Use member-force notation like \\(F_{AB}\\), \\(F_{AC}\\), \\(R_A\\), and \\(N_B\\).
+- Never write malformed statics text like \\thet, F_[AB], or "\\sum F_x = 0:".
+- Do 70% of the setup and algebra, then leave the final simple solve step for the student.`;
+  }
+
+  if (/\b(circuit|kvl|kcl|current|voltage|resistor|ohm)\b/.test(combined)) {
+    return `CIRCUIT RULES:
+- Use Ohm's law and Kirchhoff equations explicitly.
+- Write loop or node equations in LaTeX such as \\[\\sum V_{\\text{loop}} = 0\\] or \\[\\sum I_{\\text{node}} = 0\\].
+- Keep component notation professional, such as \\(R_1\\), \\(V_{R_2}\\), and \\(I\\).`;
+  }
+
+  return "";
+}
+
 async function repairScaffoldedStepsWithAI(question: string, steps: any[], openaiKey: string, topicInfo?: any) {
   const invalidReport = validateStepsHaveCalculations(steps);
   const qualityReport = assessSolutionQuality(question, steps, topicInfo);
@@ -154,6 +177,7 @@ For every step:
               qualityIssues: qualityReport.issues,
               steps,
               instructions: `${buildTopicGuidance(topicInfo)}
+${buildDomainSpecificScaffoldRules(question, topicInfo)}
 
 Repair any step that is missing units, missing equations, using the wrong type of terminology, or giving away the answer in the hint.`
             })

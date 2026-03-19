@@ -41,6 +41,12 @@ export const PROMPT_REGRESSION_CASES: PromptRegressionCase[] = [
     question: 'A 60 kg person stands at the center of a table with four legs. Find the normal force on each leg.',
   },
   {
+    id: 'statics-joint-equilibrium',
+    label: 'Statics Joint Equilibrium',
+    expectedDomain: 'Mechanical Engineering / Statics',
+    question: 'At joint A of a truss, a 300 N horizontal load acts to the right and a 520 N force acts along member AD. Determine the forces in members AB and AC by applying joint equilibrium.',
+  },
+  {
     id: 'quadratic-equation',
     label: 'Quadratic Formula',
     expectedDomain: 'Mathematics / Algebra',
@@ -156,6 +162,33 @@ export function evaluatePromptRegressionCase(
       validateMathText(step.hint, `${stepLabel} hint`, issues);
     }
   });
+
+  if (testCase.id === 'statics-joint-equilibrium') {
+    const allText = steps
+      .map((step) => `${step.title || ''} ${step.description || ''} ${step.hint || ''} ${step.formula || ''}`)
+      .join(' ');
+
+    if (!/\\sum\s*F_x|\\sum\s*F_y/.test(allText)) {
+      issues.push({
+        severity: 'error',
+        message: 'Statics joint case should include explicit equilibrium equations such as \\sum F_x = 0 and \\sum F_y = 0',
+      });
+    }
+
+    if (!/F_\{AB\}|F_\{AC\}/.test(allText)) {
+      issues.push({
+        severity: 'error',
+        message: 'Statics joint case should use proper member-force notation like F_{AB} and F_{AC}',
+      });
+    }
+
+    if (!/\\sin|\\cos/.test(allText)) {
+      issues.push({
+        severity: 'warning',
+        message: 'Statics joint case should usually show component resolution with \\sin or \\cos when members are inclined',
+      });
+    }
+  }
 
   return {
     id: testCase.id,

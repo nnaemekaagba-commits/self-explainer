@@ -56,6 +56,11 @@ function inferExpectedTerms(question: string, topicInfo?: TopicInfo): string[] {
   return [];
 }
 
+function isStaticsLike(question: string, topicInfo?: TopicInfo): boolean {
+  const combined = `${lower(question)} ${(topicInfo?.domain || "").toLowerCase()} ${(topicInfo?.subDomain || "").toLowerCase()}`;
+  return /\b(statics|truss|joint|member|equilibrium|support|reaction|free body|moment|pin|roller)\b/.test(combined);
+}
+
 function hintGivesAwayAnswer(hint: string): boolean {
   return /\bthe answer is\b|\btherefore\b|\bso the final answer\b|\byou get\b/i.test(hint);
 }
@@ -102,7 +107,17 @@ export function assessSolutionQuality(question: string, steps: any[], topicInfo?
       issues.push({ stepIndex: index, issue: `Step language does not reflect expected domain terms (${expectedTerms.slice(0, 3).join(", ")})` });
     }
 
-    if (/x\s\d|\btimes\b|sum[a-z_]|â|ð/.test(`${description} ${formula} ${hint}`)) {
+    if (isStaticsLike(question, topicInfo)) {
+      const allText = `${step.title || ""} ${description} ${formula} ${hint}`;
+      if (!/\\sum\s*F_x|\\sum\s*F_y|\\sum\s*M/.test(allText)) {
+        issues.push({ stepIndex: index, issue: "Statics step should reference an equilibrium equation such as \\sum F_x = 0, \\sum F_y = 0, or \\sum M = 0" });
+      }
+      if (/joint|member|truss/i.test(allText) && !/(\\sin|\\cos|component|angle|member)/.test(allText)) {
+        issues.push({ stepIndex: index, issue: "Joint/member statics step should show force components or member-direction relationships" });
+      }
+    }
+
+    if (/x\s\d|\btimes\b|sum[a-z_]|Ã¢|Ã°/.test(`${description} ${formula} ${hint}`)) {
       issues.push({ stepIndex: index, issue: "Step still contains unprofessional math text or encoding artifacts" });
     }
   });

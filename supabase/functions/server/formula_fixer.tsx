@@ -49,6 +49,28 @@ function repairMalformedLatex(text: string): string {
     .replace(/\s*:\s*/g, ' = ');
 }
 
+function repairStaticsEquationText(text: string): string {
+  return text
+    .replace(/\\sum\s*F_x\s*=\s*0\s*[:=]\s*/g, '\\sum F_x = ')
+    .replace(/\\sum\s*F_y\s*=\s*0\s*[:=]\s*/g, '\\sum F_y = ')
+    .replace(/\\sum\s*M_?([A-Za-z])\s*=\s*0\s*[:=]\s*/g, '\\sum M_$1 = ')
+    .replace(/F_\[([A-Za-z0-9]+)\]/g, 'F_{$1}')
+    .replace(/N_\[([A-Za-z0-9]+)\]/g, 'N_{$1}')
+    .replace(/R_\[([A-Za-z0-9]+)\]/g, 'R_{$1}')
+    .replace(/\\cos\s*\(\s*\\theta\s*\\\)/g, '\\cos(\\theta)')
+    .replace(/\\sin\s*\(\s*\\theta\s*\\\)/g, '\\sin(\\theta)')
+    .replace(/\\cos\s*\(\s*\\theta\s*\)/g, '\\cos(\\theta)')
+    .replace(/\\sin\s*\(\s*\\theta\s*\)/g, '\\sin(\\theta)')
+    .replace(/\\cos\s*\(\s*theta\s*\)/gi, '\\cos(\\theta)')
+    .replace(/\\sin\s*\(\s*theta\s*\)/gi, '\\sin(\\theta)')
+    .replace(/cos\s*\(\s*theta\s*\)/gi, '\\cos(\\theta)')
+    .replace(/sin\s*\(\s*theta\s*\)/gi, '\\sin(\\theta)')
+    .replace(/\\cos\s*\(\s*\\thet(?![a-zA-Z])/g, '\\cos(\\theta')
+    .replace(/\\sin\s*\(\s*\\thet(?![a-zA-Z])/g, '\\sin(\\theta')
+    .replace(/\\cos\s*\\theta/g, '\\cos(\\theta)')
+    .replace(/\\sin\s*\\theta/g, '\\sin(\\theta)');
+}
+
 function looksLikeStandaloneFormula(line: string): boolean {
   const trimmed = line.trim();
   if (!trimmed) return false;
@@ -79,7 +101,7 @@ function wrapFormulaLines(text: string): string {
 export function fixFormulaNotation(text: string): string {
   if (!text) return text;
 
-  let fixed = repairMalformedLatex(normalizeBrokenSymbols(text));
+  let fixed = repairStaticsEquationText(repairMalformedLatex(normalizeBrokenSymbols(text)));
 
   // Fix "Sum" written as text.
   fixed = fixed.replace(/\b[Ss]um([A-Z_])/g, '\\sum $1');
@@ -147,7 +169,7 @@ export function fixFormulaNotation(text: string): string {
   fixed = fixed.replace(/->|→/g, '\\rightarrow');
   fixed = fixed.replace(/<-|←/g, '\\leftarrow');
 
-  fixed = repairMalformedLatex(fixed);
+  fixed = repairStaticsEquationText(repairMalformedLatex(fixed));
   return fixed.replace(/[ \t]+/g, ' ').trim();
 }
 

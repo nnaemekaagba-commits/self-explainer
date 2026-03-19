@@ -44,8 +44,30 @@ function repairMalformedLatex(text: string): string {
     .replace(/\s*:\s*/g, ' = ');
 }
 
+function repairStaticsEquationText(text: string): string {
+  return text
+    .replace(/\\sum\s*F_x\s*=\s*0\s*[:=]\s*/g, '\\sum F_x = ')
+    .replace(/\\sum\s*F_y\s*=\s*0\s*[:=]\s*/g, '\\sum F_y = ')
+    .replace(/\\sum\s*M_?([A-Za-z])\s*=\s*0\s*[:=]\s*/g, '\\sum M_$1 = ')
+    .replace(/F_\[([A-Za-z0-9]+)\]/g, 'F_{$1}')
+    .replace(/N_\[([A-Za-z0-9]+)\]/g, 'N_{$1}')
+    .replace(/R_\[([A-Za-z0-9]+)\]/g, 'R_{$1}')
+    .replace(/\\cos\s*\(\s*\\theta\s*\\\)/g, '\\cos(\\theta)')
+    .replace(/\\sin\s*\(\s*\\theta\s*\\\)/g, '\\sin(\\theta)')
+    .replace(/\\cos\s*\(\s*\\theta\s*\)/g, '\\cos(\\theta)')
+    .replace(/\\sin\s*\(\s*\\theta\s*\)/g, '\\sin(\\theta)')
+    .replace(/\\cos\s*\(\s*theta\s*\)/gi, '\\cos(\\theta)')
+    .replace(/\\sin\s*\(\s*theta\s*\)/gi, '\\sin(\\theta)')
+    .replace(/cos\s*\(\s*theta\s*\)/gi, '\\cos(\\theta)')
+    .replace(/sin\s*\(\s*theta\s*\)/gi, '\\sin(\\theta)')
+    .replace(/\\cos\s*\(\s*\\thet(?![a-zA-Z])/g, '\\cos(\\theta')
+    .replace(/\\sin\s*\(\s*\\thet(?![a-zA-Z])/g, '\\sin(\\theta')
+    .replace(/\\cos\s*\\theta/g, '\\cos(\\theta)')
+    .replace(/\\sin\s*\\theta/g, '\\sin(\\theta)');
+}
+
 function fixMathContent(mathContent: string): string {
-  let fixed = repairMalformedLatex(normalizeBrokenSymbols(mathContent));
+  let fixed = repairStaticsEquationText(repairMalformedLatex(normalizeBrokenSymbols(mathContent)));
 
   fixed = fixed.replace(/\bsum([A-Z_])/g, '\\sum $1');
   fixed = fixed.replace(/\bSum([A-Z_])/g, '\\sum $1');
@@ -70,7 +92,7 @@ function fixMathContent(mathContent: string): string {
   fixed = fixed.replace(/√\s*([A-Za-z0-9]+)/g, '\\sqrt{$1}');
   fixed = fixed.replace(/π/g, '\\pi ');
 
-  fixed = repairMalformedLatex(fixed);
+  fixed = repairStaticsEquationText(repairMalformedLatex(fixed));
   return fixed.replace(/[ \t]+/g, ' ').trim();
 }
 
@@ -109,7 +131,7 @@ export function wrapUnwrappedLatex(text: string): string {
 export function validateAndFixLatex(text: string): string {
   if (!text) return text;
 
-  let fixed = repairMalformedLatex(normalizeBrokenSymbols(text));
+  let fixed = repairStaticsEquationText(repairMalformedLatex(normalizeBrokenSymbols(text)));
 
   let iterations = 0;
   while (fixed.includes('\\\\') && iterations < 10) {
