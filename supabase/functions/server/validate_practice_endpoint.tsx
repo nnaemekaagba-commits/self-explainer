@@ -1,5 +1,71 @@
 import type { Context } from "npm:hono";
 
+function normalizeComparisonText(value: string): string {
+  return (value || "")
+    .toLowerCase()
+    .replace(/\\text\{([^}]*)\}/g, "$1")
+    .replace(/\\left|\\right/g, "")
+    .replace(/\\,/g, "")
+    .replace(/\\cdot|\\times/g, "*")
+    .replace(/\\pm/g, "+-")
+    .replace(/\\frac\{([^{}]+)\}\{([^{}]+)\}/g, "($1)/($2)")
+    .replace(/[(){}\[\]\s,$]/g, "")
+    .replace(/[−–]/g, "-");
+}
+
+function extractAnswerCore(value: string): string {
+  const trimmed = (value || "").trim();
+  if (!trimmed) return "";
+  const parts = trimmed.split(/=|≈|:|→/).map((part) => part.trim()).filter(Boolean);
+  return parts.length > 0 ? parts[parts.length - 1] : trimmed;
+}
+
+function parseNumericValue(value: string): number | null {
+  const core = extractAnswerCore(value);
+  if (!core) return null;
+
+  const fractionMatch = core.match(/^([-+]?\d*\.?\d+)\s*\/\s*([-+]?\d*\.?\d+)$/);
+  if (fractionMatch) {
+    const numerator = Number(fractionMatch[1]);
+    const denominator = Number(fractionMatch[2]);
+    if (Number.isFinite(numerator) && Number.isFinite(denominator) && denominator !== 0) {
+      return numerator / denominator;
+    }
+  }
+
+  const numericMatch = core.match(/[-+]?\d*\.?\d+(?:e[-+]?\d+)?/i);
+  if (!numericMatch) return null;
+  const parsed = Number(numericMatch[0]);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function answersEquivalent(studentAnswer: string, expectedAnswer?: string): boolean {
+  if (!studentAnswer || !expectedAnswer) return false;
+
+  const studentCore = extractAnswerCore(studentAnswer);
+  const expectedCore = extractAnswerCore(expectedAnswer);
+  if (!studentCore || !expectedCore) return false;
+
+  if (normalizeComparisonText(studentCore) === normalizeComparisonText(expectedCore)) {
+    return true;
+  }
+
+  const studentNumeric = parseNumericValue(studentCore);
+  const expectedNumeric = parseNumericValue(expectedCore);
+  if (studentNumeric !== null && expectedNumeric !== null) {
+    return Math.abs(studentNumeric - expectedNumeric) <= 1e-6;
+  }
+
+  return false;
+}
+
+function explanationLooksReasonable(text: string): boolean {
+  const normalized = (text || "").trim().toLowerCase();
+  if (!normalized || normalized === "no explanation provided") return false;
+  if (normalized.split(/\s+/).length < 4) return false;
+  return /\b(because|so|therefore|using|apply|substitute|divide|multiply|equilibrium|force|moment|formula|equation|simplify|isolate)\b/.test(normalized);
+}
+
 export async function validatePracticeAnswerHandler(c: Context) {
   try {
     console.log("Validating practice answer...");
@@ -89,6 +155,20 @@ Use LaTeX notation for any math in the feedback.`;
 
     const data = await response.json();
     const result = JSON.parse(data.choices[0].message.content);
+
+    if (answersEquivalent(userAnswer, step.expectedAnswer)) {
+      result.answerCorrect = true;
+      if (!result.answerFeedback || /wrong|incorrect|reconsider|check/i.test(result.answerFeedback)) {
+        result.answerFeedback = `Your answer is mathematically equivalent to the expected result \\(${step.expectedAnswer}\\).`;
+      }
+    }
+
+    if (userExplanation && explanationLooksReasonable(userExplanation) && result.explanationCorrect === false) {
+      result.explanationCorrect = true;
+      if (!result.explanationFeedback || /wrong|incorrect|gap|missing/i.test(result.explanationFeedback)) {
+        result.explanationFeedback = "Your explanation shows the main idea for this step.";
+      }
+    }
 
     console.log("Answer and explanation validated:", result);
     return c.json(result);

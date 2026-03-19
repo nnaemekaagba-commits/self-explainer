@@ -200,7 +200,7 @@ function repairLatexDelimiters(raw: string): string {
   let fixed = raw;
 
   fixed = fixed
-    .replace(/(^|[\n\r]\s*)(\\(?:sum|frac|sqrt|theta|alpha|beta|gamma|delta|lambda|mu|sigma|omega|sin|cos|tan)\b[\s\S]*?\\\))/g, '$1\\($2')
+    .replace(/(^|[\n\r]\s*|,\s*)(\\(?:sum|frac|sqrt|theta|alpha|beta|gamma|delta|lambda|mu|sigma|omega|sin|cos|tan)\b[\s\S]*?\\\))/g, '$1\\($2')
     .replace(/(^|[\n\r]\s*)(\\sum\s+F_[xy]\s*=\s*0\s*[:=]\s*)/g, '$1\\($2\\)')
     .replace(/(^|[\n\r]\s*)(\\sum\s+M_?[A-Za-z]?\s*=\s*0\s*[:=]\s*)/g, '$1\\($2\\)')
     .replace(/\b(we have|the equations become|this gives|therefore)\s+=\s+/gi, '$1 ');

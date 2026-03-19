@@ -25,6 +25,8 @@ interface StepFeedbackScreenProps {
     answerCorrect: boolean;
     explanationCorrect: boolean;
     feedback?: string;
+    answerFeedback?: string;
+    explanationFeedback?: string;
     answerImageUrl?: string;
     explanationImageUrl?: string;
     diagram?: { svg: string; concept: string };
@@ -239,7 +241,7 @@ export const StepFeedbackScreen = ({
             <p className="text-[12px] font-semibold text-gray-400 mb-0.5 italic">Not provided</p>
           )}
 
-          {feedbackData?.feedback && (
+          {(feedbackData?.answerFeedback || feedbackData?.feedback) && (
             <div className={`bg-white border rounded-md p-1.5 mt-1 ${
               answerCorrect ? 'border-green-200' : 'border-orange-200'
             }`}>
@@ -248,7 +250,7 @@ export const StepFeedbackScreen = ({
               }`}>
                 {answerCorrect ? '✓ FEEDBACK' : '⚠️ FEEDBACK'}
               </p>
-              <MathRenderer content={feedbackData.feedback} className="text-[10px] text-gray-700 leading-tight" />
+              <MathRenderer content={feedbackData.answerFeedback || feedbackData.feedback || ''} className="text-[10px] text-gray-700 leading-tight" />
               {feedbackData.diagram && (
                 <div className="mt-2 border border-gray-200 rounded p-2 bg-gray-50">
                   <p className="text-[8px] text-gray-600 mb-1">📊 Explanatory Diagram: {feedbackData.diagram.concept}</p>
@@ -290,7 +292,7 @@ export const StepFeedbackScreen = ({
             <p className="text-[10px] text-gray-400 leading-tight mb-0.5 italic">Not provided</p>
           )}
 
-          {feedbackData?.feedback && (
+          {(feedbackData?.explanationFeedback || feedbackData?.feedback) && (
             <div className={`bg-white border rounded-md p-1.5 mt-1 ${
               explanationCorrect ? 'border-green-200' : 'border-orange-200'
             }`}>
@@ -299,7 +301,7 @@ export const StepFeedbackScreen = ({
               }`}>
                 {explanationCorrect ? '✓ FEEDBACK' : '⚠️ FEEDBACK'}
               </p>
-              <MathRenderer content={feedbackData.feedback} className="text-[10px] text-gray-700 leading-tight" />
+              <MathRenderer content={feedbackData.explanationFeedback || feedbackData.feedback || ''} className="text-[10px] text-gray-700 leading-tight" />
               {feedbackData.diagram && (
                 <div className="mt-2 border border-gray-200 rounded p-2 bg-gray-50">
                   <p className="text-[8px] text-gray-600 mb-1">📊 Explanatory Diagram: {feedbackData.diagram.concept}</p>

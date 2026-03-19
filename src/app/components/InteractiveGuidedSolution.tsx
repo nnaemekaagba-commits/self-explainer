@@ -209,6 +209,8 @@ export function InteractiveGuidedSolution({
             answerCorrect: true,
             explanationCorrect: true,
             feedback: result.feedback,
+            answerFeedback: result.answerFeedback,
+            explanationFeedback: result.explanationFeedback,
             answerImageUrl: answerImage,
             explanationImageUrl: explanationImage,
             diagram: result.diagram,
@@ -231,6 +233,8 @@ export function InteractiveGuidedSolution({
             answerCorrect: false,
             explanationCorrect: false,
             feedback: result.feedback,
+            answerFeedback: result.answerFeedback,
+            explanationFeedback: result.explanationFeedback,
             answerImageUrl: answerImage,
             explanationImageUrl: explanationImage,
             diagram: result.diagram
@@ -247,6 +251,8 @@ export function InteractiveGuidedSolution({
             answerCorrect: result.answerCorrect,
             explanationCorrect: result.explanationCorrect,
             feedback: result.feedback,
+            answerFeedback: result.answerFeedback,
+            explanationFeedback: result.explanationFeedback,
             answerImageUrl: answerImage,
             explanationImageUrl: explanationImage,
             diagram: result.diagram

@@ -133,6 +133,72 @@ function buildDomainSpecificScaffoldRules(question: string, topicInfo: any): str
   return "";
 }
 
+function normalizeComparisonText(value: string): string {
+  return (value || "")
+    .toLowerCase()
+    .replace(/\\text\{([^}]*)\}/g, "$1")
+    .replace(/\\left|\\right/g, "")
+    .replace(/\\,/g, "")
+    .replace(/\\cdot|\\times/g, "*")
+    .replace(/\\pm/g, "+-")
+    .replace(/\\frac\{([^{}]+)\}\{([^{}]+)\}/g, "($1)/($2)")
+    .replace(/[(){}\[\]\s,$]/g, "")
+    .replace(/[−–]/g, "-");
+}
+
+function extractAnswerCore(value: string): string {
+  const trimmed = (value || "").trim();
+  if (!trimmed) return "";
+  const parts = trimmed.split(/=|≈|:|→/).map((part) => part.trim()).filter(Boolean);
+  return parts.length > 0 ? parts[parts.length - 1] : trimmed;
+}
+
+function parseNumericValue(value: string): number | null {
+  const core = extractAnswerCore(value);
+  if (!core) return null;
+
+  const fractionMatch = core.match(/^([-+]?\d*\.?\d+)\s*\/\s*([-+]?\d*\.?\d+)$/);
+  if (fractionMatch) {
+    const numerator = Number(fractionMatch[1]);
+    const denominator = Number(fractionMatch[2]);
+    if (Number.isFinite(numerator) && Number.isFinite(denominator) && denominator !== 0) {
+      return numerator / denominator;
+    }
+  }
+
+  const numericMatch = core.match(/[-+]?\d*\.?\d+(?:e[-+]?\d+)?/i);
+  if (!numericMatch) return null;
+  const parsed = Number(numericMatch[0]);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function answersEquivalent(studentAnswer: string, referenceAnswer: string): boolean {
+  if (!studentAnswer || !referenceAnswer) return false;
+
+  const studentCore = extractAnswerCore(studentAnswer);
+  const referenceCore = extractAnswerCore(referenceAnswer);
+  if (!studentCore || !referenceCore) return false;
+
+  if (normalizeComparisonText(studentCore) === normalizeComparisonText(referenceCore)) {
+    return true;
+  }
+
+  const studentNumeric = parseNumericValue(studentCore);
+  const referenceNumeric = parseNumericValue(referenceCore);
+  if (studentNumeric !== null && referenceNumeric !== null) {
+    return Math.abs(studentNumeric - referenceNumeric) <= 1e-6;
+  }
+
+  return false;
+}
+
+function explanationLooksReasonable(text: string): boolean {
+  const normalized = (text || "").trim().toLowerCase();
+  if (!normalized || normalized === "[see uploaded image]") return false;
+  if (normalized.split(/\s+/).length < 4) return false;
+  return /\b(because|so|therefore|using|apply|substitute|divide|multiply|equilibrium|force|moment|formula|equation|simplify|isolate|component|direction)\b/.test(normalized);
+}
+
 async function repairScaffoldedStepsWithAI(question: string, steps: any[], openaiKey: string, topicInfo?: any) {
   const invalidReport = validateStepsHaveCalculations(steps);
   const qualityReport = assessSolutionQuality(question, steps, topicInfo);
@@ -961,7 +1027,7 @@ Student's Explanation (text): ${explanationIsImageOnly ? 'Not provided - see ima
             : `\nThe student also uploaded an IMAGE for their explanation. Analyze the image to understand their complete reasoning.\n`;
         }
         
-        validationText += `\nValidate STRICTLY. Reject poor explanations. Consider BOTH text and images when provided.`;
+        validationText += `\nValidate FAIRLY. Accept mathematically equivalent answers and concise but meaningful explanations. Consider BOTH text and images when provided.`;
         
         userMessageContent.push({
           type: "text",
@@ -1057,6 +1123,36 @@ BE HARSH. Students learn better from constructive criticism than false praise.`
           }
         ];
 
+        messages[0].content = `You are a fair, careful math and engineering tutor validating student work.
+
+CRITICAL VALIDATION RULES:
+
+For ANSWER validation:
+- Mark the answer correct when it is mathematically equivalent to the expected step result.
+- Accept equivalent forms such as fractions/decimals, rearranged equations, or the same intermediate result written differently.
+- Ignore formatting-only differences.
+- If the student uploaded an image, analyze it carefully before judging.
+
+For EXPLANATION validation:
+- Accept concise explanations if they correctly identify the idea, operation, or governing principle used in the step.
+- Do not fail an explanation only because it is brief.
+- Mark the explanation wrong only when it clearly misses the reasoning, concept, or logical connection to the step.
+- If the student uploaded an image, analyze it carefully before judging.
+
+FORMATTING RULE:
+- If you mention any equation, expression, variable, fraction, exponent, root, unit-bearing value, or numerical comparison in feedback, write it in professional LaTeX using \\( ... \\) or \\[ ... \\]
+- Never use plain-text math.
+
+Return JSON with:
+- answerCorrect: boolean
+- explanationCorrect: boolean
+- answerFeedback: string
+- explanationFeedback: string
+- feedback: string
+- diagramDescription: string
+
+Keep the tone supportive, specific, and fair.`;
+
         const openaiResponse = await fetch("https://api.openai.com/v1/chat/completions", {
           method: "POST",
           headers: {
@@ -1080,10 +1176,35 @@ BE HARSH. Students learn better from constructive criticism than false praise.`
           let feedbackDiagram = null;
           // Diagram generation removed (Gemini dependency removed)
 
+          const answerFeedback = validateAndFixLatex(
+            fixMissingSpaces(
+              parsed.answerFeedback ||
+              (parsed.answerCorrect ? "Your answer is correct." : "Check the mathematical result for this step.")
+            )
+          );
+          const explanationFeedback = validateAndFixLatex(
+            fixMissingSpaces(
+              parsed.explanationFeedback ||
+              (parsed.explanationCorrect ? "Your explanation shows the right reasoning." : "Explain the key idea or operation that justifies this step.")
+            )
+          );
+
+          let adjustedAnswerCorrect = Boolean(parsed.answerCorrect);
+          if (!adjustedAnswerCorrect && stepData?.formula && answersEquivalent(userAnswer || "", stepData.formula)) {
+            adjustedAnswerCorrect = true;
+          }
+
+          let adjustedExplanationCorrect = Boolean(parsed.explanationCorrect);
+          if (!adjustedExplanationCorrect && explanationLooksReasonable(userExplanation || "")) {
+            adjustedExplanationCorrect = true;
+          }
+
           return c.json({
-            answerCorrect: parsed.answerCorrect || false,
-            explanationCorrect: parsed.explanationCorrect || false,
-            feedback: validateAndFixLatex(fixMissingSpaces(parsed.feedback || "Review your work")),
+            answerCorrect: adjustedAnswerCorrect,
+            explanationCorrect: adjustedExplanationCorrect,
+            answerFeedback,
+            explanationFeedback,
+            feedback: validateAndFixLatex(fixMissingSpaces(parsed.feedback || `${answerFeedback} ${explanationFeedback}`)),
             diagram: feedbackDiagram
           });
         }

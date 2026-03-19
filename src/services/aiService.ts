@@ -633,6 +633,9 @@ export async function validateStep(
   answerCorrect: boolean;
   explanationCorrect: boolean;
   feedback: string;
+  answerFeedback?: string;
+  explanationFeedback?: string;
+  diagram?: { svg: string; concept: string } | null;
 }> {
   const response = await fetch(`${API_BASE_URL}/validate-step`, {
     method: "POST",
