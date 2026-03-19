@@ -23,8 +23,14 @@ export function hasActualCalculations(description: string): boolean {
   
   // Check for fraction calculations
   const hasFractionCalc = /\\frac{.*\d+.*}{.*\d+.*}/.test(description);
+
+  // Check for substituted values inside equations, such as (60 kg)(9.8 m/s^2)
+  const hasSubstitutionChain = /\\\(.+\d.+(?:=|\\Rightarrow).+\d.+\\\)/.test(description);
+
+  // Check for common engineering equalities with units
+  const hasUnitsWithCalculation = /\d+\.?\d*\s*,?\s*\\text\{[^}]+\}.*=\s*[-+]?\d+/.test(description);
   
-  return hasEqualsWithNumbers || hasMathOps || hasLatexCalc || hasParenthCalc || hasFractionCalc;
+  return hasEqualsWithNumbers || hasMathOps || hasLatexCalc || hasParenthCalc || hasFractionCalc || hasSubstitutionChain || hasUnitsWithCalculation;
 }
 
 /**
@@ -215,6 +221,15 @@ export function validateStepsHaveCalculations(steps: any[]): {
       issues.push({
         stepIndex: index,
         issue: "Description lacks actual calculations"
+      });
+      invalidCount++;
+      return;
+    }
+
+    if (!step.formula || !/\\\(|\\\[/.test(step.formula)) {
+      issues.push({
+        stepIndex: index,
+        issue: "Formula field is missing or lacks LaTeX delimiters"
       });
       invalidCount++;
       return;

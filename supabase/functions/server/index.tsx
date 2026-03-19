@@ -15,6 +15,7 @@ import { validateStepsHaveCalculations, validateAndEnhanceDescription } from "./
 import { fixAllFormulas } from "./formula_fixer.tsx";
 import { validatePracticeAnswerHandler } from "./validate_practice_endpoint.tsx";
 import { aggressiveUnescape } from "./aggressive_unescape.tsx";
+import { assessSolutionQuality } from "./solution_quality_guard.tsx";
 
 const app = new Hono();
 
@@ -93,13 +94,29 @@ async function identifyProblemTopic(question: string, openaiKey: string): Promis
   }
 }
 
-async function repairScaffoldedStepsWithAI(question: string, steps: any[], openaiKey: string) {
+function buildTopicGuidance(topicInfo: any): string {
+  if (!topicInfo) return "";
+  const domain = topicInfo.domain || "General";
+  const subDomain = topicInfo.subDomain || "Unknown";
+  const notation = topicInfo.notation || "mathematical";
+  const keyTerms = Array.isArray(topicInfo.keyTerms) ? topicInfo.keyTerms.join(", ") : "";
+  return `DOMAIN CONTEXT:
+- Primary domain: ${domain}
+- Sub-domain: ${subDomain}
+- Notation style: ${notation}
+- Expected terminology: ${keyTerms || "Use the core terms from the problem statement"}
+
+Use this context to choose the correct governing equations, vocabulary, units, and verification checks.`;
+}
+
+async function repairScaffoldedStepsWithAI(question: string, steps: any[], openaiKey: string, topicInfo?: any) {
   const invalidReport = validateStepsHaveCalculations(steps);
-  if (invalidReport.allValid) {
+  const qualityReport = assessSolutionQuality(question, steps, topicInfo);
+  if (invalidReport.allValid && qualityReport.allValid) {
     return steps;
   }
 
-  console.log(`Repairing ${invalidReport.invalidCount} scaffold step(s) that lack calculations...`);
+  console.log(`Repairing scaffold steps. Calculation issues: ${invalidReport.invalidCount}, quality issues: ${qualityReport.invalidCount}`);
 
   try {
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -122,13 +139,24 @@ For every step:
 - Rewrite description so it SHOWS actual setup, substitution, and intermediate calculation work.
 - Do about 70% of the work, then stop before the final simple arithmetic or simplification.
 - Keep formula non-empty and in LaTeX.
+- Keep formula as equations only. Do not include prose labels like "Ohm's law" or "equilibrium conditions".
 - Keep hint as a direct question asking the student to finish the remaining 30%.
+- Use the correct governing equations for the domain. If the problem is engineering or physics, include units in the worked calculations.
+- Use domain-specific terminology naturally in the title, description, and hint.
 - Never return a complete final answer unless the step is purely conceptual.
 - Preserve stepNumber order.`
           },
           {
             role: "user",
-            content: JSON.stringify({ question, steps })
+            content: JSON.stringify({
+              question,
+              topicInfo,
+              qualityIssues: qualityReport.issues,
+              steps,
+              instructions: `${buildTopicGuidance(topicInfo)}
+
+Repair any step that is missing units, missing equations, using the wrong type of terminology, or giving away the answer in the hint.`
+            })
           }
         ]
       })
@@ -301,9 +329,11 @@ app.post("/make-server-9063c65e/solve-problem", async (c) => {
       }, 500);
     }
 
-    // PERFORMANCE OPTIMIZATION: Skip topic identification to reduce latency
-    // The AI can identify topic/domain implicitly from the question
-    console.log(`Using OpenAI API (skipping topic identification for speed)`);
+    let topicInfo = null;
+    if (question && question.trim()) {
+      topicInfo = await identifyProblemTopic(question, openaiKey);
+    }
+    console.log(`Using OpenAI API with topic context:`, topicInfo || "none");
 
     if (openaiKey) {
       let openaiError = null; // Declare error tracking variable
@@ -331,7 +361,7 @@ app.post("/make-server-9063c65e/solve-problem", async (c) => {
           }
           
           // ADD CRITICAL REQUIREMENTS TO USER MESSAGE
-          userPrompt += `\n\n${CORRECTNESS_MANDATE}\n\n${LATEX_PROFESSIONAL_STANDARDS}\n\n${SIMPLE_REMINDER}\n\n${VERIFICATION_PROTOCOL}`;
+          userPrompt += `\n\n${buildTopicGuidance(topicInfo)}\n\n${CORRECTNESS_MANDATE}\n\n${LATEX_PROFESSIONAL_STANDARDS}\n\n${SIMPLE_REMINDER}\n\n${VERIFICATION_PROTOCOL}`;
           
           console.log("OCR Mode:", hasAdditionalText ? "Image + Text" : "Image Only");
           
@@ -399,6 +429,8 @@ MANDATORY LaTeX NOTATION RULES:
             {
               role: "user",
               content: `Create a guided solution for this problem: ${question}
+
+${buildTopicGuidance(topicInfo)}
 
 ${CORRECTNESS_MANDATE}
 
@@ -680,17 +712,21 @@ ${VERIFICATION_PROTOCOL}`
           // CRITICAL VALIDATION: Check if steps actually contain calculations
           console.log("Validating that steps contain actual calculations...");
           let validationResult = validateStepsHaveCalculations(enhancedSteps);
+          let qualityResult = assessSolutionQuality(validatedQuestion, enhancedSteps, topicInfo);
           let stepsWithDiagrams = enhancedSteps;
           
-          if (!validationResult.allValid) {
+          if (!validationResult.allValid || !qualityResult.allValid) {
             console.error("SCAFFOLDING VALIDATION FAILED");
             console.error(`Found ${validationResult.invalidCount} steps WITHOUT proper calculations:`);
             validationResult.issues.forEach(issue => {
               console.error(`  Step ${issue.stepIndex + 1}: ${issue.issue}`);
             });
+            qualityResult.issues.forEach(issue => {
+              console.error(`  Quality Step ${issue.stepIndex + 1}: ${issue.issue}`);
+            });
             console.error("Attempting one repair pass to add worked calculations...");
 
-            const repairedSteps = await repairScaffoldedStepsWithAI(validatedQuestion, enhancedSteps, openaiKey);
+            const repairedSteps = await repairScaffoldedStepsWithAI(validatedQuestion, enhancedSteps, openaiKey, topicInfo);
             stepsWithDiagrams = repairedSteps.map((step: any, index: number) => ({
               ...step,
               title: validateAndFixLatex(fixMissingSpaces(step.title || enhancedSteps[index]?.title || "")),
@@ -700,13 +736,16 @@ ${VERIFICATION_PROTOCOL}`
               diagram: step.diagram ? validateAndFixLatex(fixMissingSpaces(step.diagram)) : enhancedSteps[index]?.diagram
             }));
             validationResult = validateStepsHaveCalculations(stepsWithDiagrams);
+            qualityResult = assessSolutionQuality(validatedQuestion, stepsWithDiagrams, topicInfo);
 
-            if (!validationResult.allValid) {
-              validationResult.issues.forEach(issue => {
+            if (!validationResult.allValid || !qualityResult.allValid) {
+              [...validationResult.issues, ...qualityResult.issues].forEach(issue => {
                 const step = stepsWithDiagrams[issue.stepIndex];
                 console.error(`\nStill problematic Step ${issue.stepIndex + 1}:`);
                 console.error(`  Title: ${step.title}`);
                 console.error(`  Description: ${step.description?.substring(0, 200)}...`);
+                console.error(`  Formula: ${step.formula?.substring(0, 160)}...`);
+                console.error(`  Hint: ${step.hint?.substring(0, 160)}...`);
               });
             } else {
               console.log(`Repair succeeded. All ${validationResult.validCount} steps now contain calculations.`);
@@ -813,7 +852,7 @@ app.post("/make-server-9063c65e/get-hint", async (c) => {
         messages: [
           {
             role: "system",
-            content: "You are a math tutor. Provide a helpful hint for the student without giving away the full answer."
+            content: "You are a math tutor. Provide a helpful hint for the student without giving away the full answer. Use professional LaTeX for every mathematical expression. Prefer \\( ... \\) for inline math and \\[ ... \\] for standalone equations. Never use plain-text math like x^2, sqrt(x), sum, 2x+3=11, or 5 x 10."
           },
           {
             role: "user",
@@ -948,6 +987,10 @@ For EXPLANATION validation - BE VERY STRICT:
 - Check for mathematical vocabulary relevant to the problem
 - Minimal effort explanations = FAIL
 - IF student uploaded an IMAGE for their explanation, read and analyze it carefully to understand their complete reasoning (diagrams, work shown, written explanations in the image)
+
+FORMATTING RULE:
+- If you mention any equation, expression, variable, fraction, exponent, root, unit-bearing value, or numerical comparison in feedback, write it in professional LaTeX using \\( ... \\) or \\[ ... \\]
+- Never use plain-text math like x^2, sqrt(x), 4N=588, sum Fy, 5 x 10, or theta
 
 RED FLAGS for explanation (mark as WRONG):
 - Fewer than 15 words without good reason
@@ -1281,12 +1324,13 @@ YOUR ROLE - USE SELF-EXPLANATION QUESTIONING WITH DOMAIN-SPECIFIC TERMINOLOGY AN
 9. Never give direct answers - always prompt them to think like engineers and justify their reasoning
 
 IMPORTANT FORMATTING:
-- Use LaTeX for ALL mathematical formulas enclosed in $ signs (inline) or $$ signs (block)
-- Examples: $F = ma$, $v = \\frac{d}{t}$, $$\\sum_{i=1}^{n} x_i$$
+- Use LaTeX for ALL mathematical formulas
+- Prefer \\( ... \\) for inline expressions and \\[ ... \\] for standalone equations
+- Examples: \\(F = ma\\), \\(v = \\frac{d}{t}\\), \\[\\sum_{i=1}^{n} x_i\\]
 - For fractions: \\frac{numerator}{denominator}
 - For square roots: \\sqrt{x}
-- For subscripts: x_i or F_n
-- For superscripts: x^2 or e^{-x}
+- For subscripts: \\(x_i\\) or \\(F_n\\)
+- For superscripts: \\(x^2\\) or \\(e^{-x}\\)
 - Don't give direct answers - use Socratic questioning
 - Point out specific parts of their work that need attention
 - Provide mini-examples if helpful (with different numbers)
@@ -1396,7 +1440,7 @@ You MUST respond with ONLY valid JSON in this exact format:
   "explanation": "detailed step-by-step explanation of how to solve this"
 }
 
-Be specific and show all work. Use plain text for math (e.g., "x = 5" or "2x + 3 = 11").`
+Be specific and show all work. Use professional LaTeX for all mathematics. Prefer \\( ... \\) for inline math and \\[ ... \\] for standalone equations. Example answer format: "\\(x = 5\\)". Example explanation format: "Start with \\(2x + 3 = 11\\), subtract \\(3\\) to get \\(2x = 8\\), then divide by \\(2\\)." Do not use plain-text math.`
               },
               {
                 role: "user",

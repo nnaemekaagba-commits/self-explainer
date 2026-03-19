@@ -248,9 +248,7 @@ export const StepFeedbackScreen = ({
               }`}>
                 {answerCorrect ? '✓ FEEDBACK' : '⚠️ FEEDBACK'}
               </p>
-              <p className="text-[10px] text-gray-700 leading-tight">
-                {feedbackData.feedback}
-              </p>
+              <MathRenderer content={feedbackData.feedback} className="text-[10px] text-gray-700 leading-tight" />
               {feedbackData.diagram && (
                 <div className="mt-2 border border-gray-200 rounded p-2 bg-gray-50">
                   <p className="text-[8px] text-gray-600 mb-1">📊 Explanatory Diagram: {feedbackData.diagram.concept}</p>
@@ -278,9 +276,7 @@ export const StepFeedbackScreen = ({
             </p>
           </div>
           {feedbackData?.userExplanation && feedbackData.userExplanation !== '[See uploaded image]' ? (
-            <p className="text-[10px] text-gray-700 leading-tight mb-0.5">
-              {feedbackData.userExplanation}
-            </p>
+            <MathRenderer content={feedbackData.userExplanation} className="text-[10px] text-gray-700 leading-tight mb-0.5" />
           ) : feedbackData?.explanationImageUrl ? (
             <div className="mt-1">
               <p className="text-[9px] text-gray-600 mb-1">📸 Uploaded explanation:</p>
@@ -303,9 +299,7 @@ export const StepFeedbackScreen = ({
               }`}>
                 {explanationCorrect ? '✓ FEEDBACK' : '⚠️ FEEDBACK'}
               </p>
-              <p className="text-[10px] text-gray-700 leading-tight">
-                {feedbackData.feedback}
-              </p>
+              <MathRenderer content={feedbackData.feedback} className="text-[10px] text-gray-700 leading-tight" />
               {feedbackData.diagram && (
                 <div className="mt-2 border border-gray-200 rounded p-2 bg-gray-50">
                   <p className="text-[8px] text-gray-600 mb-1">📊 Explanatory Diagram: {feedbackData.diagram.concept}</p>

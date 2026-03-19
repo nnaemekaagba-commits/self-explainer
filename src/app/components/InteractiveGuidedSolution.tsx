@@ -563,9 +563,10 @@ export function InteractiveGuidedSolution({
 
           {/* Problem Display */}
           <div className="bg-green-50 rounded-xl p-4 shadow-sm border border-green-200">
-            <p className="text-[14px] text-green-900 mb-2">
-              <span className="font-semibold">✓ Problem:</span> {userQuestion || "[Problem statement]"}
-            </p>
+            <div className="text-[14px] text-green-900 mb-2">
+              <span className="font-semibold">✓ Problem:</span>{' '}
+              <MathRenderer content={userQuestion || "[Problem statement]"} className="inline-block align-middle" />
+            </div>
           </div>
 
           {/* Interactive Steps */}

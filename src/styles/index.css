@@ -30,16 +30,42 @@
 
 
 .math-content {
+  display: grid;
+  gap: 0.55rem;
   white-space: normal;
-  word-break: break-word;
-  overflow-wrap: anywhere;
-  line-height: 1.65;
+  word-break: normal;
+  overflow-wrap: break-word;
+  line-height: 1.7;
+}
+
+.math-content > :first-child {
+  margin-top: 0;
+}
+
+.math-content > :last-child {
+  margin-bottom: 0;
+}
+
+.math-content .math-paragraph {
+  margin: 0;
+}
+
+.math-content .math-list {
+  margin: 0;
+  padding-left: 1.2rem;
+  display: grid;
+  gap: 0.35rem;
+}
+
+.math-content .math-list-item {
+  line-height: 1.7;
 }
 
 .math-content .math-inline-block {
   display: inline-block;
   max-width: 100%;
   vertical-align: middle;
+  margin: 0 0.08em;
 }
 
 .math-content .math-display-block {
@@ -48,25 +74,39 @@
   max-width: 100%;
   overflow-x: auto;
   overflow-y: hidden;
-  margin: 0.85rem 0;
-  padding: 0.15rem 0;
+  margin: 0.2rem 0;
+  padding: 0.45rem 0.15rem;
+  border-radius: 0.9rem;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(248, 250, 252, 0.92));
 }
 
 .math-content .katex-display {
   margin: 0;
   overflow-x: auto;
   overflow-y: hidden;
-  padding-bottom: 0.15rem;
+  padding-bottom: 0.1rem;
+  text-align: left;
 }
 
 .math-content .katex {
   max-width: 100%;
-  font-size: 1.02em;
+  font-size: 1.04em;
+  line-height: 1.25;
 }
 
 .math-content .katex-display > .katex {
   display: inline-block;
   min-width: max-content;
+}
+
+.formula-box .math-content {
+  gap: 0.7rem;
+}
+
+.formula-box .math-content .math-display-block {
+  padding: 0.7rem 0.45rem;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(241, 245, 249, 0.96));
+  box-shadow: inset 0 0 0 1px rgba(167, 139, 250, 0.12);
 }
 
 .math-content .math-render-fallback {

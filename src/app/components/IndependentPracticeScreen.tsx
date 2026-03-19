@@ -415,7 +415,7 @@ export function IndependentPracticeScreen({
                               <div className="mt-2">
                                 <p className="text-[12px] font-medium text-gray-700 mb-1">Your explanation:</p>
                                 <div className="text-[13px] text-gray-800 bg-white p-2 rounded">
-                                  {stepExplanations[step.stepNumber]}
+                                  <MathRenderer content={stepExplanations[step.stepNumber]} />
                                 </div>
                               </div>
                             )}

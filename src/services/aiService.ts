@@ -130,26 +130,26 @@ function generatePartialSolution(question: string): {
   if (lowerQ.includes('quadratic') || lowerQ.includes('x²') || lowerQ.includes('x^2')) {
     return {
       solution: `This is a quadratic equation. You can solve it by factoring, completing the square, or using the quadratic formula.`,
-      strategy: `For quadratic equations in the form ax² + bx + c = 0, the quadratic formula is often the most reliable method.`,
+      strategy: `For quadratic equations in the form \\(ax^2 + bx + c = 0\\), the quadratic formula is often the most reliable method.`,
       steps: [
         {
           title: "Write in Standard Form",
-          description: "Rearrange the equation to the form ax² + bx + c = 0.",
-          formula: "ax² + bx + c = 0"
+          description: "Rearrange the equation to the form \\(ax^2 + bx + c = 0\\).",
+          formula: "\\(ax^2 + bx + c = 0\\)"
         },
         {
           title: "Identify Coefficients",
-          description: "Identify the values of a, b, and c from your equation.",
-          formula: "a = coefficient of x², b = coefficient of x, c = constant term"
+          description: "Identify the values of \\(a\\), \\(b\\), and \\(c\\) from your equation.",
+          formula: "\\(a = \\text{coefficient of } x^2\\), \\(b = \\text{coefficient of } x\\), \\(c = \\text{constant term}\\)"
         },
         {
           title: "Apply Quadratic Formula",
-          description: "Substitute a, b, and c into the quadratic formula.",
-          formula: "x = (-b ± √(b² - 4ac)) / (2a)"
+          description: "Substitute \\(a\\), \\(b\\), and \\(c\\) into the quadratic formula.",
+          formula: "\\(x = \\frac{-b \\pm \\sqrt{b^2 - 4ac}}{2a}\\)"
         },
         {
           title: "Simplify",
-          description: "Calculate the discriminant (b² - 4ac) and solve for both possible values of x.",
+          description: "Calculate the discriminant \\((b^2 - 4ac)\\) and solve for both possible values of \\(x\\).",
           formula: ""
         }
       ]
@@ -187,7 +187,7 @@ function generatePartialSolution(question: string): {
   // Derivatives
   if (lowerQ.includes('derivative') || lowerQ.includes('differentiate')) {
     return {
-      solution: `To find the derivative, apply the power rule: d/dx(xⁿ) = n·xⁿ⁻¹. For polynomials, differentiate each term separately.`,
+      solution: `To find the derivative, apply the power rule: \\(\\frac{d}{dx}(x^n) = n x^{n-1}\\). For polynomials, differentiate each term separately.`,
       strategy: `Break down the function into individual terms, apply the power rule to each, and combine the results.`,
       steps: [
         {
@@ -197,8 +197,8 @@ function generatePartialSolution(question: string): {
         },
         {
           title: "Apply Power Rule to Each Term",
-          description: "For each term axⁿ, the derivative is n·axⁿ���¹. Constants become 0.",
-          formula: "d/dx(xⁿ) = n·xⁿ⁻¹"
+          description: "For each term \\(a x^n\\), the derivative is \\(a n x^{n-1}\\). Constants become \\(0\\).",
+          formula: "\\(\\frac{d}{dx}(x^n) = n x^{n-1}\\)"
         },
         {
           title: "Combine the Terms",
@@ -217,7 +217,7 @@ function generatePartialSolution(question: string): {
   // Percentage problems
   if (lowerQ.includes('%') || lowerQ.includes('percent')) {
     return {
-      solution: `To solve percentage problems, convert the percentage to a decimal and multiply, or use the formula: (part/whole) × 100 = percentage.`,
+      solution: `To solve percentage problems, convert the percentage to a decimal and multiply, or use the formula \\(\\frac{\\text{part}}{\\text{whole}} \\times 100 = \\text{percentage}\\).`,
       strategy: `Remember: "of" means multiply, "is" means equals. Convert percentage to decimal by dividing by 100.`,
       steps: [
         {
@@ -227,8 +227,8 @@ function generatePartialSolution(question: string): {
         },
         {
           title: "Set Up the Equation",
-          description: "Use the formula: (Part/Whole) × 100 = Percentage, or rearrange as needed.",
-          formula: "Part = (Percentage/100) × Whole"
+          description: "Use the formula \\(\\frac{\\text{Part}}{\\text{Whole}} \\times 100 = \\text{Percentage}\\), or rearrange as needed.",
+          formula: "\\(\\text{Part} = \\frac{\\text{Percentage}}{100} \\times \\text{Whole}\\)"
         },
         {
           title: "Calculate",

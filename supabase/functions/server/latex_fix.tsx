@@ -1,125 +1,159 @@
-// Helper function to fix math content inside LaTeX delimiters
+const BROKEN_SYMBOL_MAP: Array<[string, string]> = [
+  ['âˆ’', '−'],
+  ['âˆš', '√'],
+  ['Â±', '±'],
+  ['Ã—', '×'],
+  ['Ã·', '÷'],
+  ['â‰¤', '≤'],
+  ['â‰¥', '≥'],
+  ['â‰ ', '≠'],
+  ['â‰ˆ', '≈'],
+  ['â†’', '→'],
+  ['â†', '←'],
+  ['Â²', '²'],
+  ['Â³', '³'],
+  ['Â°', '°'],
+  ['Â·', '·'],
+  ['Âπ', 'π'],
+  ['Â', ''],
+];
+
+function normalizeBrokenSymbols(text: string): string {
+  return BROKEN_SYMBOL_MAP.reduce((fixed, [broken, replacement]) => {
+    return fixed.replaceAll(broken, replacement);
+  }, text);
+}
+
 function fixMathContent(mathContent: string): string {
-  let fixed = mathContent;
-  
-  // CRITICAL: Fix "sum" appearing as text in math mode
-  // This is the most common issue - AI writes "sumF_y" instead of "\sum F_y"
-  fixed = fixed.replace(/\bsum([A-Z_])/g, '\\sum $1'); // sumF_y -> \sum F_y
-  fixed = fixed.replace(/\bSum([A-Z_])/g, '\\sum $1'); // SumM_A -> \sum M_A
-  fixed = fixed.replace(/\bsum\b/g, '\\sum'); // standalone sum
-  fixed = fixed.replace(/\bSum\b/g, '\\sum'); // standalone Sum
-  
-  // Fix other common text operators that should be symbols
+  let fixed = normalizeBrokenSymbols(mathContent);
+
+  fixed = fixed.replace(/\bsum([A-Z_])/g, '\\sum $1');
+  fixed = fixed.replace(/\bSum([A-Z_])/g, '\\sum $1');
+  fixed = fixed.replace(/\bsum\b/g, '\\sum');
+  fixed = fixed.replace(/\bSum\b/g, '\\sum');
   fixed = fixed.replace(/\bprod\b/gi, '\\prod');
   fixed = fixed.replace(/\bint\b/g, '\\int');
   fixed = fixed.replace(/\blim\b/g, '\\lim');
-  
-  // Fix "times" written as text
   fixed = fixed.replace(/\btimes\b/g, '\\times');
-  
-  // Fix broken LaTeX commands (missing backslash)
-  fixed = fixed.replace(/imes\b/g, '\\times'); // "imes" -> "\times"
-  
-  return fixed;
+  fixed = fixed.replace(/imes\b/g, '\\times');
+  fixed = fixed.replace(/×/g, '\\times ');
+  fixed = fixed.replace(/·/g, '\\cdot ');
+  fixed = fixed.replace(/÷/g, '\\div ');
+  fixed = fixed.replace(/<=|≤/g, '\\leq ');
+  fixed = fixed.replace(/>=|≥/g, '\\geq ');
+  fixed = fixed.replace(/!=|≠/g, '\\neq ');
+  fixed = fixed.replace(/~=|≈/g, '\\approx ');
+  fixed = fixed.replace(/\+\/-|±/g, '\\pm ');
+  fixed = fixed.replace(/->|→/g, '\\to ');
+  fixed = fixed.replace(/<-|←/g, '\\leftarrow ');
+  fixed = fixed.replace(/sqrt\s*\(([^)]+)\)/g, '\\sqrt{$1}');
+  fixed = fixed.replace(/√\s*([A-Za-z0-9]+)/g, '\\sqrt{$1}');
+  fixed = fixed.replace(/π/g, '\\pi ');
+
+  return fixed.replace(/[ \t]+/g, ' ').trim();
 }
 
-// Helper function to wrap LaTeX that's not already wrapped
-export function wrapUnwrappedLatex(text: string): string {
-  // Check if this text segment contains LaTeX commands
-  // Common LaTeX indicators: \command, subscripts, superscripts
-  const hasLatexCommands = /\\[a-zA-Z]+|[_^]/.test(text);
-  
-  if (!hasLatexCommands) {
-    return text; // No LaTeX, return as-is
+function wrapEquationLine(line: string): string {
+  const trimmed = line.trim();
+  if (!trimmed) return line;
+  if (/^(\\\[.*\\\]|\\\(.*\\\)|\$\$.*\$\$|\$.*\$)$/.test(trimmed)) return line;
+
+  const hasMathMarkers =
+    /[=<>≤≥≈±→÷×√∑π]/.test(trimmed) ||
+    /\\(frac|sqrt|sum|pi|theta|alpha|beta|gamma|delta|lambda|mu|sigma|omega|times|cdot|leq|geq|neq|to)/.test(trimmed);
+  const textWordCount = (trimmed.match(/\b[A-Za-z]{4,}\b/g) || []).length;
+
+  if (hasMathMarkers && textWordCount <= 4 && trimmed.length <= 180) {
+    return `\\[${fixMathContent(trimmed)}\\]`;
   }
-  
-  // Trim whitespace from edges before wrapping
-  const trimmed = text.trim();
-  const leadingSpace = text.match(/^\s*/)?.[0] || '';
-  const trailingSpace = text.match(/\s*$/)?.[0] || '';
-  
-  // This text has LaTeX but isn't wrapped - wrap it
+
+  return normalizeBrokenSymbols(line);
+}
+
+export function wrapUnwrappedLatex(text: string): string {
+  const normalized = normalizeBrokenSymbols(text);
+  const hasLatexCommands = /\\[a-zA-Z]+|[_^]/.test(normalized);
+
+  if (!hasLatexCommands) {
+    return normalized;
+  }
+
+  const trimmed = normalized.trim();
+  const leadingSpace = normalized.match(/^\s*/)?.[0] || '';
+  const trailingSpace = normalized.match(/\s*$/)?.[0] || '';
+
   return `${leadingSpace}\\(${trimmed}\\)${trailingSpace}`;
 }
 
-// Helper function to validate and fix LaTeX formatting
 export function validateAndFixLatex(text: string): string {
   if (!text) return text;
-  
-  let fixed = text;
-  
-  // CRITICAL: First aggressively unescape any double/triple/multiple backslashes
+
+  let fixed = normalizeBrokenSymbols(text);
+
   let iterations = 0;
   while (fixed.includes('\\\\') && iterations < 10) {
     fixed = fixed.replace(/\\\\/g, '\\');
     iterations++;
   }
-  // Remove trailing backslashes
   fixed = fixed.replace(/\\+$/g, '');
-  
+
   console.log('LATEX FIX - validateAndFixLatex input:', text.substring(0, 200));
   if (iterations > 0) {
     console.log(`🔧 AGGRESSIVE UNESCAPE: Fixed ${iterations} levels of backslash escaping`);
     console.log('   After unescape:', fixed.substring(0, 200));
   }
-  
-  // Find all existing math regions to fix their content
-  const mathRegions: Array<{start: number, end: number, original: string, fixed: string}> = [];
-  
-  // Process \(...\) regions - use single backslash as it appears in the string
+
+  const mathRegions: Array<{ start: number; end: number; original: string; fixed: string }> = [];
   let regex = /\\(\([^)]*\))/g;
-  let match;
+  let match: RegExpExecArray | null;
+
   while ((match = regex.exec(fixed)) !== null) {
-    const innerContent = match[0].slice(2, -2); // Remove \( and \)
-    const fixedContent = fixMathContent(innerContent);
+    const innerContent = match[0].slice(2, -2);
+    const repaired = fixMathContent(innerContent);
     mathRegions.push({
       start: match.index,
       end: match.index + match[0].length,
       original: match[0],
-      fixed: `\\(${fixedContent}\\)`
+      fixed: `\\(${repaired}\\)`,
     });
   }
-  
-  // Process \[...\] regions
+
   regex = /\\\[[\s\S]*?\\\]/g;
   while ((match = regex.exec(fixed)) !== null) {
-    const innerContent = match[0].slice(2, -2); // Remove \[ and \]
-    const fixedContent = fixMathContent(innerContent);
+    const innerContent = match[0].slice(2, -2);
+    const repaired = fixMathContent(innerContent);
     mathRegions.push({
       start: match.index,
       end: match.index + match[0].length,
       original: match[0],
-      fixed: `\\[${fixedContent}\\]`
+      fixed: `\\[${repaired}\\]`,
     });
   }
-  
-  // Process $$...$$ regions  
+
   regex = /\$\$[\s\S]*?\$\$/g;
   while ((match = regex.exec(fixed)) !== null) {
-    const innerContent = match[0].slice(2, -2); // Remove $$ and $$
-    const fixedContent = fixMathContent(innerContent);
+    const innerContent = match[0].slice(2, -2);
+    const repaired = fixMathContent(innerContent);
     mathRegions.push({
       start: match.index,
       end: match.index + match[0].length,
       original: match[0],
-      fixed: `\$\$${fixedContent}\$\$`
+      fixed: `$$${repaired}$$`,
     });
   }
-  
-  // Process $...$ regions (be careful not to match $$)
+
   regex = /\$([^$]+)\$/g;
   while ((match = regex.exec(fixed)) !== null) {
     const innerContent = match[1];
-    const fixedContent = fixMathContent(innerContent);
+    const repaired = fixMathContent(innerContent);
     mathRegions.push({
       start: match.index,
       end: match.index + match[0].length,
       original: match[0],
-      fixed: `$${fixedContent}$`
+      fixed: `$${repaired}$`,
     });
   }
-  
-  // Replace all math regions with their fixed versions (in reverse order to maintain positions)
+
   mathRegions.sort((a, b) => b.start - a.start);
   for (const region of mathRegions) {
     if (region.original !== region.fixed) {
@@ -127,13 +161,18 @@ export function validateAndFixLatex(text: string): string {
       fixed = fixed.substring(0, region.start) + region.fixed + fixed.substring(region.end);
     }
   }
-  
+
+  fixed = fixed
+    .split('\n')
+    .map((line) => wrapEquationLine(line))
+    .join('\n');
+
   console.log('SUCCESS - LaTeX validation complete');
   if (fixed !== text) {
     console.log('WARNING - Fixed LaTeX formatting');
     console.log('   Original:', text.substring(0, 150));
     console.log('   Fixed:', fixed.substring(0, 150));
   }
-  
+
   return fixed;
 }

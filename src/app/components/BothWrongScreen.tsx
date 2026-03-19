@@ -252,7 +252,7 @@ export function BothWrongScreen({
                   Your Answer ❌
                 </p>
                 <div className="p-3 bg-red-50 rounded-lg border border-red-200">
-                  <p className="text-[13px] text-gray-800">{userAnswer || "(No answer provided)"}</p>
+                  <MathRenderer content={userAnswer || "(No answer provided)"} className="text-[13px] text-gray-800" />
                 </div>
                 <p className="text-[10px] text-red-600 mt-1 italic">
                   This answer needs correction - check your calculations
@@ -264,7 +264,7 @@ export function BothWrongScreen({
                   Your Explanation ❌
                 </p>
                 <div className="p-3 bg-red-50 rounded-lg border border-red-200">
-                  <p className="text-[13px] text-gray-800">{userExplanation || "(No explanation provided)"}</p>
+                  <MathRenderer content={userExplanation || "(No explanation provided)"} className="text-[13px] text-gray-800" />
                 </div>
                 <p className="text-[10px] text-red-600 mt-1 italic">
                   Your reasoning needs improvement - review the hint below

@@ -70,6 +70,8 @@ FORMATTING MUST BE PROFESSIONAL:
 - Use proper LaTeX delimiters: \\\\( \\\\) for inline, \\\\[ \\\\] for display
 - Use proper symbols: \\\\(\\\\sum\\\\), \\\\(\\\\theta\\\\), \\\\(\\\\frac{a}{b}\\\\), \\\\(x^2\\\\), \\\\(v_0\\\\)
 - Use proper spacing: \\\\(5\\\\,\\\\text{kg}\\\\), \\\\(9.8\\\\,\\\\text{m/s}^2\\\\)
+- In the formula field, include equations only. Do not add prose labels like "Equilibrium conditions" or "Ohm's law"
+- Prefer display math \\\\[ ... \\\\] when a full equation should stand on its own line
 - Make it look like a published textbook, not handwritten notes
 
 YOUR REPUTATION DEPENDS ON:
@@ -161,8 +163,10 @@ KE = \\\\frac{1}{2}mv^2 = \\\\frac{1}{2}(5\\\\,\\\\text{kg})(15\\\\,\\\\text{m/s
 
 EVERY FORMULA FIELD MUST HAVE PROPER LATEX:
 "formula": "\\\\(W = mg\\\\)\\\\n\\\\(\\\\sum F_y = 0\\\\)\\\\n\\\\(4N = 588\\\\,\\\\text{N}\\\\)"
+"formula": "\\\\[\\\\sum F_x = 0\\\\]\\\\n\\\\[\\\\sum F_y = 0\\\\]"
 
 NOT: "formula": "W = mg, sum Fy = 0, 4N = 588"
+NOT: "formula": "\\\\(\\\\sum F_x = 0\\\\)\\\\nEquilibrium conditions"
 `;
 
 export const VERIFICATION_PROTOCOL = `
