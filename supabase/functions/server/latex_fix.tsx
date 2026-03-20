@@ -22,6 +22,8 @@ function normalizeBrokenSymbols(text: string): string {
   return BROKEN_SYMBOL_MAP.reduce((fixed, [broken, replacement]) => {
     return fixed.replaceAll(broken, replacement);
   }, text)
+    .replace(/(?:\\t)+(?=imes|ext)/g, '\\')
+    .replace(/(?:\t)+(?=imes|ext)/g, '\\')
     .replace(/\\t(?=imes|ext)/g, '\\')
     .replace(/\t(?=imes|ext)/g, '\\');
 }
