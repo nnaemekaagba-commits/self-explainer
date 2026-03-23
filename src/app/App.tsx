@@ -457,9 +457,6 @@ export default function App() {
       };
 
       addSharedQuestionToInbox(inboxQuestion);
-      setUserQuestion(inboxQuestion.question);
-      setUploadedImageUrl(inboxQuestion.imageUrl || null);
-      setSharePrefillToken(inboxQuestion.id);
       setMode('prototype');
       setCurrentScreen('shared-exercise');
       sessionStorage.removeItem(PENDING_SHARED_PAYLOAD_KEY);
@@ -493,9 +490,6 @@ export default function App() {
           sharedBy: sharedQuestion.sharedBy || 'A friend',
           sharedAt: sharedQuestion.sharedAt || new Date().toLocaleString(),
         });
-        setUserQuestion(sharedQuestion.question || '');
-        setUploadedImageUrl(sharedQuestion.imageUrl || null);
-        setSharePrefillToken(sharedQuestion.id);
         setMode('prototype');
         setCurrentScreen('shared-exercise');
         sessionStorage.removeItem(PENDING_SHARED_QUESTION_ID_KEY);
