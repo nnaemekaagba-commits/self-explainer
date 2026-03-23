@@ -33,6 +33,22 @@ interface ValidateAnswerResponse {
   feedback: string;
 }
 
+type TutorSubject = 'linear-algebra' | 'trigonometry' | 'geometry';
+
+function parseSubjectScopedPrompt(question: string): { subject: TutorSubject | null; cleanQuestion: string } {
+  const match = question.match(/^\[Subject:\s*(linear-algebra|trigonometry|geometry)\]\s*([\s\S]*)$/i);
+  if (!match) {
+    return { subject: null, cleanQuestion: question };
+  }
+
+  const subject = match[1].toLowerCase() as TutorSubject;
+  const remainder = match[2].replace(/^Problem:\s*/i, '').trim();
+  return {
+    subject,
+    cleanQuestion: remainder || question,
+  };
+}
+
 
 function extractFirstNumberAfterKeyword(question: string, keyword: string): number | null {
   const regex = new RegExp(`${keyword}\\s*(?:of\\s*)?([-+]?\\d*\\.?\\d+)`, 'i');
@@ -412,15 +428,16 @@ export async function testConnection(): Promise<boolean> {
 function getDemoSolution(question: string, imageUrl?: string): Promise<SolveProblemResponse> {
   return new Promise((resolve) => {
     setTimeout(() => {
+      const { subject, cleanQuestion } = parseSubjectScopedPrompt(question);
       // Simulate OCR/text extraction for images
-      let extractedQuestion = question;
+      let extractedQuestion = cleanQuestion;
 
-      if (imageUrl && question.includes('analyze this image')) {
+      if (imageUrl && cleanQuestion.includes('analyze this image')) {
         // Demo: simulate extracting text from image
         extractedQuestion = "Solve for x: 3x + 7 = 22\n\n(Fallback mode: the backend did not return a full AI solution, so a local guided solution was generated instead.)";
-      } else if (question.includes('PDF document')) {
+      } else if (cleanQuestion.includes('PDF document')) {
         extractedQuestion = "Calculate the area of a circle with radius 5cm\n\n(Fallback mode: the backend did not return a full AI solution, so a local guided solution was generated instead.)";
-      } else if (question.startsWith('Uploaded file:')) {
+      } else if (cleanQuestion.startsWith('Uploaded file:')) {
         extractedQuestion = "Example math problem extracted from file\n\n(Fallback mode: the backend did not return a full AI solution, so a local guided solution was generated instead.)";
       }
 
@@ -450,9 +467,16 @@ function parseSimpleLinearEquation(question: string): { a: number; b: number; c:
 
 // Generate problem-specific partial solution
       const problemSpecificSolution = generatePartialSolution(extractedQuestion);
+      const subjectPrefix = subject
+        ? {
+            'linear-algebra': 'Linear algebra focus: ',
+            'trigonometry': 'Trigonometry focus: ',
+            'geometry': 'Geometry focus: ',
+          }[subject]
+        : '';
 
       resolve({
-        solution: problemSpecificSolution.solution,
+        solution: `${subjectPrefix}${problemSpecificSolution.solution}`,
         strategy: problemSpecificSolution.strategy,
         extractedQuestion: extractedQuestion,
         steps: problemSpecificSolution.steps.map((step, index) => ({

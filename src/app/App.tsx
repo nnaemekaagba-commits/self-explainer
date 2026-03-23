@@ -68,6 +68,18 @@ interface DesignConfig {
   inputBgColor: string;
 }
 
+type TutorSubject = 'linear-algebra' | 'trigonometry' | 'geometry';
+
+function buildSubjectScopedPrompt(subject: TutorSubject, question: string): string {
+  const subjectInstructions: Record<TutorSubject, string> = {
+    'linear-algebra': 'Teach this as linear algebra with emphasis on structure, strategy choice, and problem-solving habits. Highlight why each step works, common mistakes with matrices/vectors/systems, and how to check the result.',
+    'trigonometry': 'Teach this as trigonometry with emphasis on identities, angle reasoning, unit-circle thinking, and method selection. Highlight common sign/quadrant mistakes and how to verify the result.',
+    'geometry': 'Teach this as geometry with emphasis on diagrams, theorem/property justification, and proof-style reasoning. Highlight why each fact follows and how to check whether the relationships are consistent.',
+  };
+
+  return `[Subject: ${subject}] ${subjectInstructions[subject]}\n\nProblem:\n${question}`;
+}
+
 export default function App() {
   // Auth state
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -79,6 +91,7 @@ export default function App() {
   const [fidelity, setFidelity] = useState<'high' | 'low'>('high');
   const [currentScreen, setCurrentScreen] = useState<'login' | 'signup' | 'forgot-password' | 'reset-password' | 'home' | 'scaffolded' | 'scaffolded-active' | 'archive' | 'guided' | 'invite' | 'colearn' | 'feedback-correct' | 'feedback-wrong' | 'feedback-both-wrong' | 'feedback-partial' | 'profile' | 'self-explanation' | 'student-work' | 'practice' | 'shared-exercise'>('login');
   const [screenHistory, setScreenHistory] = useState<Array<'login' | 'signup' | 'forgot-password' | 'reset-password' | 'home' | 'scaffolded' | 'scaffolded-active' | 'archive' | 'guided' | 'invite' | 'colearn' | 'feedback-correct' | 'feedback-wrong' | 'feedback-both-wrong' | 'feedback-partial' | 'profile' | 'self-explanation' | 'student-work' | 'practice' | 'shared-exercise'>>(['login']);
+  const [selectedSubject, setSelectedSubject] = useState<TutorSubject>('linear-algebra');
   const [aiData, setAiData] = useState<any>(null);
   const [userQuestion, setUserQuestion] = useState<string>('');
   const [uploadedImageUrl, setUploadedImageUrl] = useState<string | null>(null);
@@ -515,7 +528,11 @@ export default function App() {
     // Regenerate the solution with the corrected question
     try {
       // ✅ Pass the uploaded image URL when regenerating
-      const aiResponse = await solveProblem(correctedQuestion, uploadedImageUrl || undefined, 'openai');
+      const aiResponse = await solveProblem(
+        buildSubjectScopedPrompt(selectedSubject, correctedQuestion),
+        uploadedImageUrl || undefined,
+        'openai'
+      );
       setAiData(aiResponse);
       console.log('Solution regenerated successfully');
     } catch (error) {
@@ -711,7 +728,10 @@ export default function App() {
                     console.log('🤖 Calling solveProblem API...');
                     console.log('⏱️  Processing started at:', new Date().toLocaleTimeString());
                     const startTime = Date.now();
-                    const aiResponse = await solveProblem(question.trim() || 'Please solve this problem from the image', uploadedImageUrl || undefined, 'openai');
+                    const aiPrompt = question.trim()
+                      ? buildSubjectScopedPrompt(selectedSubject, question.trim())
+                      : buildSubjectScopedPrompt(selectedSubject, 'Please solve this problem from the image');
+                    const aiResponse = await solveProblem(aiPrompt, uploadedImageUrl || undefined, 'openai');
                     const duration = ((Date.now() - startTime) / 1000).toFixed(1);
                     console.log(`✅ AI Response received in ${duration}s`);
                     console.log('📊 Steps count:', aiResponse?.steps?.length || 0);
@@ -737,6 +757,8 @@ export default function App() {
                   if (question) setUserQuestion(question);
                   setUploadedImageUrl(imageUrl || null);
                 }}
+                selectedSubject={selectedSubject}
+                onSubjectChange={setSelectedSubject}
                 onGetCurrentInput={(getter) => setGetCurrentInput(() => getter)}
                 isGeneratingSolution={isGeneratingSolution}
                 getCurrentInput={getCurrentInput}

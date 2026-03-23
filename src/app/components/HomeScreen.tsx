@@ -11,6 +11,8 @@ import { ActionButton } from './ActionButton';
 import { HomeIndicator } from './HomeIndicator';
 import { SelfExplanationModal } from './SelfExplanationModal';
 
+type TutorSubject = 'linear-algebra' | 'trigonometry' | 'geometry';
+
 interface HomeScreenProps {
   config: {
     heading: string;
@@ -29,6 +31,8 @@ interface HomeScreenProps {
   onSharedExerciseClick?: () => void;
   onGenerateSolution: () => Promise<void>;
   onQuestionSubmit: (question: string, imageUrl: string | null) => void;
+  selectedSubject: TutorSubject;
+  onSubjectChange: (subject: TutorSubject) => void;
   onGetCurrentInput: (getter: () => string) => void;
   isGeneratingSolution: boolean;
   getCurrentInput: (() => string) | null;
@@ -47,6 +51,8 @@ export function HomeScreen({
   onSharedExerciseClick,
   onGenerateSolution,
   onQuestionSubmit,
+  selectedSubject,
+  onSubjectChange,
   onGetCurrentInput,
   isGeneratingSolution,
   getCurrentInput,
@@ -58,6 +64,18 @@ export function HomeScreen({
 }: HomeScreenProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
+
+  const subjectLabels: Record<TutorSubject, string> = {
+    'linear-algebra': 'Linear Algebra',
+    'trigonometry': 'Trigonometry',
+    'geometry': 'Geometry',
+  };
+
+  const subjectDescriptions: Record<TutorSubject, string> = {
+    'linear-algebra': 'Build strategy with systems, matrices, vectors, and transformations.',
+    'trigonometry': 'Practice identities, angle reasoning, unit-circle thinking, and trig equations.',
+    'geometry': 'Strengthen diagram reading, theorem use, and proof-style justification.',
+  };
 
   const saveToSharerSharedExercises = (sharedQuestion: {
     id: string;
@@ -164,9 +182,38 @@ export function HomeScreen({
             </h2>
           ) : null}
 
+          <div className="w-full mb-5">
+            <p className="text-[12px] font-semibold uppercase tracking-[0.18em] text-purple-700 mb-3 text-center">
+              Choose A Skill Track
+            </p>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              {(['linear-algebra', 'trigonometry', 'geometry'] as TutorSubject[]).map((subject) => {
+                const isActive = selectedSubject === subject;
+                return (
+                  <button
+                    key={subject}
+                    onClick={() => onSubjectChange(subject)}
+                    className={`rounded-2xl border px-4 py-3 text-left transition-all ${
+                      isActive
+                        ? 'border-purple-600 bg-white shadow-md ring-2 ring-purple-200'
+                        : 'border-purple-200 bg-white/70 hover:bg-white hover:border-purple-300'
+                    }`}
+                  >
+                    <div className="text-[14px] font-semibold text-gray-900">
+                      {subjectLabels[subject]}
+                    </div>
+                    <div className="mt-1 text-[12px] leading-relaxed text-gray-600">
+                      {subjectDescriptions[subject]}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
           <div className="mb-6 text-justify max-w-xl">
             <p className="text-[14px] text-gray-600 leading-relaxed">
-              <strong>Paste or type your math problem</strong> below, or upload an image of it. Then click <strong>"{config.button2Label}"</strong> to get step-by-step help with hints and explanations!
+              <strong>Paste or type your {subjectLabels[selectedSubject].toLowerCase()} problem</strong> below, or upload an image of it. The tutor will guide you through understanding the problem, choosing a strategy, and checking your reasoning instead of just giving an answer.
             </p>
           </div>
 
