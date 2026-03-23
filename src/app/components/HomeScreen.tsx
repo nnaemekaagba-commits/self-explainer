@@ -158,9 +158,11 @@ export function HomeScreen({
       <div className="flex-1 flex flex-col items-center justify-center px-6 bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50 relative overflow-auto">
         <MathBackground />
         <div className="relative z-10 w-full max-w-2xl flex flex-col items-center py-8">
-          <h2 className="text-2xl md:text-3xl text-gray-900 mb-3 font-semibold text-center">
-            {config.heading}
-          </h2>
+          {config.heading ? (
+            <h2 className="text-2xl md:text-3xl text-gray-900 mb-3 font-semibold text-center">
+              {config.heading}
+            </h2>
+          ) : null}
 
           <div className="mb-6 text-justify max-w-xl">
             <p className="text-[14px] text-gray-600 leading-relaxed">

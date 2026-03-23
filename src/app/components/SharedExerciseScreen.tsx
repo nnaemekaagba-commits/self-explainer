@@ -112,7 +112,16 @@ export const SharedExerciseScreen = ({
             {sharedQuestions.map((question) => (
               <div
                 key={question.id}
-                className="border-2 border-purple-200 rounded-xl p-4 bg-gradient-to-br from-purple-50 to-blue-50 hover:shadow-md transition-all"
+                role="button"
+                tabIndex={0}
+                onClick={() => handleStartQuestion(question)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    handleStartQuestion(question);
+                  }
+                }}
+                className="border-2 border-purple-200 rounded-xl p-4 bg-gradient-to-br from-purple-50 to-blue-50 hover:shadow-md transition-all cursor-pointer"
               >
                 {/* Header with shared info */}
                 <div className="flex items-start justify-between mb-3">
@@ -130,7 +139,10 @@ export const SharedExerciseScreen = ({
                     </div>
                   </div>
                   <button
-                    onClick={() => handleDeleteQuestion(question.id)}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      handleDeleteQuestion(question.id);
+                    }}
                     className="p-1.5 hover:bg-red-50 rounded-lg transition-colors"
                   >
                     <Trash2 size={16} className="text-red-500" />
@@ -161,7 +173,10 @@ export const SharedExerciseScreen = ({
 
                 {/* Action button */}
                 <button
-                  onClick={() => handleStartQuestion(question)}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    handleStartQuestion(question);
+                  }}
                   className="w-full py-2.5 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg text-[14px] font-medium hover:shadow-lg transition-all active:scale-95"
                 >
                   Start Solving
