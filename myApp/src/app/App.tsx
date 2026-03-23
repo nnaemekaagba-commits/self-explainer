@@ -96,7 +96,7 @@ export default function App() {
   // Loading state for solution generation
   const [isGeneratingSolution, setIsGeneratingSolution] = useState(false);
   const [config, setConfig] = useState<DesignConfig>({
-    heading: 'Explore the engineering thinking behind your coursework',
+    heading: '',
     placeholder: 'Type your question or paste your problem here...',
     button1Label: 'Generate Full Solution',
     button2Label: 'Generate Guided Solution',
@@ -613,11 +613,12 @@ export default function App() {
                 }}
                 onQuestionSubmit={(question, imageUrl) => {
                   if (question) setUserQuestion(question);
-                  if (imageUrl) setUploadedImageUrl(imageUrl);
+                  setUploadedImageUrl(imageUrl || null);
                 }}
                 onGetCurrentInput={(getter) => setGetCurrentInput(() => getter)}
                 isGeneratingSolution={isGeneratingSolution}
                 getCurrentInput={getCurrentInput}
+                userQuestion={userQuestion}
                 uploadedImageUrl={uploadedImageUrl}
               />
             ) : currentScreen === 'scaffolded' ? (

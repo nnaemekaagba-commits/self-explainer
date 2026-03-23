@@ -30,6 +30,7 @@ interface HomeScreenProps {
   onGetCurrentInput: (getter: () => string) => void;
   isGeneratingSolution: boolean;
   getCurrentInput: (() => string) | null;
+  userQuestion: string;
   uploadedImageUrl: string | null;
   currentUserName?: string;
 }
@@ -45,6 +46,7 @@ export function HomeScreen({
   onGetCurrentInput,
   isGeneratingSolution,
   getCurrentInput,
+  userQuestion,
   uploadedImageUrl,
   currentUserName = 'You',
 }: HomeScreenProps) {
@@ -127,9 +129,11 @@ export function HomeScreen({
         <MathBackground />
         <div className="relative z-10 w-full max-w-2xl flex flex-col items-center py-8">
           {/* Heading */}
-          <h2 className="text-2xl md:text-3xl text-gray-900 mb-3 font-semibold text-center">
-            {config.heading}
-          </h2>
+          {config.heading ? (
+            <h2 className="text-2xl md:text-3xl text-gray-900 mb-3 font-semibold text-center">
+              {config.heading}
+            </h2>
+          ) : null}
           
           {/* Instructions */}
           <div className="mb-6 text-justify max-w-xl">
@@ -145,6 +149,8 @@ export function HomeScreen({
             onProblemSolved={(data) => {}}
             onQuestionSubmit={onQuestionSubmit}
             onGetCurrentInput={onGetCurrentInput}
+            initialQuestion={userQuestion}
+            initialImageUrl={uploadedImageUrl}
           />
 
           {/* Action buttons */}

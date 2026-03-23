@@ -39,15 +39,26 @@ interface MessageInputProps {
   onProblemSolved?: (data: any) => void;
   onQuestionSubmit?: (question: string, imageUrl?: string) => void;
   onGetCurrentInput?: (getter: () => string) => void;
+  initialQuestion?: string;
+  initialImageUrl?: string | null;
 }
 
-export function MessageInput({ placeholder = "Type your question or paste your problem here...", bgColor = "#ffffff", onNavigate, onProblemSolved, onQuestionSubmit, onGetCurrentInput }: MessageInputProps) {
+export function MessageInput({
+  placeholder = "Type your question or paste your problem here...",
+  bgColor = "#ffffff",
+  onNavigate,
+  onProblemSolved,
+  onQuestionSubmit,
+  onGetCurrentInput,
+  initialQuestion = '',
+  initialImageUrl = null
+}: MessageInputProps) {
   const [showUploadMenu, setShowUploadMenu] = useState(false);
-  const [inputValue, setInputValue] = useState('');
+  const [inputValue, setInputValue] = useState(initialQuestion);
   const [isProcessing, setIsProcessing] = useState(false);
   const [processingStatus, setProcessingStatus] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
-  const [uploadedImage, setUploadedImage] = useState<string | null>(null);
+  const [uploadedImage, setUploadedImage] = useState<string | null>(initialImageUrl);
 
   // Use ref to store the current input value so parent can access it without causing re-renders
   const inputValueRef = useRef(inputValue);
@@ -56,6 +67,14 @@ export function MessageInput({ placeholder = "Type your question or paste your p
   useEffect(() => {
     inputValueRef.current = inputValue;
   }, [inputValue]);
+
+  useEffect(() => {
+    setInputValue(initialQuestion);
+  }, [initialQuestion]);
+
+  useEffect(() => {
+    setUploadedImage(initialImageUrl);
+  }, [initialImageUrl]);
 
   // Expose a stable getter function to parent (only once on mount)
   useEffect(() => {
