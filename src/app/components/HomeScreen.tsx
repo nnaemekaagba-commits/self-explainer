@@ -56,6 +56,24 @@ export function HomeScreen({
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
 
+  const buildDirectShareLink = (question: string, imageUrl: string | null) => {
+    const fullPayload = {
+      question,
+      imageUrl: imageUrl || null,
+    };
+    const fullEncoded = btoa(unescape(encodeURIComponent(JSON.stringify(fullPayload))));
+    let url = `${window.location.origin}?shareData=${encodeURIComponent(fullEncoded)}`;
+
+    // Keep URLs practical. If the image makes the URL too large, fall back to question text only.
+    if (url.length > 6000) {
+      const textOnlyPayload = { question, imageUrl: null };
+      const textOnlyEncoded = btoa(unescape(encodeURIComponent(JSON.stringify(textOnlyPayload))));
+      url = `${window.location.origin}?shareData=${encodeURIComponent(textOnlyEncoded)}`;
+    }
+
+    return url;
+  };
+
   const handleShareQuestion = async () => {
     const question = getCurrentInput?.() || '';
 
@@ -76,8 +94,17 @@ export function HomeScreen({
       console.log('Shared question stored on backend:', sharedQuestion);
       setTimeout(() => setLinkCopied(false), 2000);
     } catch (error) {
-      console.error('Failed to create share link:', error);
-      alert(`Failed to create share link: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      console.error('Backend share link failed, using direct-link fallback:', error);
+
+      try {
+        const directLink = buildDirectShareLink(question, uploadedImageUrl);
+        await copyToClipboard(directLink);
+        setLinkCopied(true);
+        setTimeout(() => setLinkCopied(false), 2000);
+      } catch (fallbackError) {
+        console.error('Failed to create fallback share link:', fallbackError);
+        alert(`Failed to create share link: ${fallbackError instanceof Error ? fallbackError.message : 'Unknown error'}`);
+      }
     }
   };
 

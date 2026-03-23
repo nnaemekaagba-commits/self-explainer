@@ -52,6 +52,7 @@ const PENDING_INVITE_CODE_KEY = 'pending_invite_code';
 const PENDING_SHARED_QUESTION_ID_KEY = 'pending_shared_question_id';
 const PENDING_SHARED_ACTIVITY_ID_KEY = 'pending_shared_activity_id';
 const PENDING_SHARED_SESSION_ID_KEY = 'pending_shared_session_id';
+const PENDING_SHARED_PAYLOAD_KEY = 'pending_shared_payload';
 
 interface DesignConfig {
   heading: string;
@@ -122,6 +123,7 @@ export default function App() {
     const sharedQuestionId = urlParams.get('s');
     const sharedActivityId = urlParams.get('shared');
     const sharedSessionId = urlParams.get('session');
+    const sharedPayload = urlParams.get('shareData');
 
     if (inviteCode) {
       sessionStorage.setItem(PENDING_INVITE_CODE_KEY, inviteCode);
@@ -134,6 +136,9 @@ export default function App() {
     }
     if (sharedSessionId) {
       sessionStorage.setItem(PENDING_SHARED_SESSION_ID_KEY, sharedSessionId);
+    }
+    if (sharedPayload) {
+      sessionStorage.setItem(PENDING_SHARED_PAYLOAD_KEY, sharedPayload);
     }
   }, []);
 
@@ -151,7 +156,7 @@ export default function App() {
     
     // Check if accessed via shared URL
     const urlParams = new URLSearchParams(window.location.search);
-    const isSharedUrl = urlParams.has('shared') || urlParams.has('invite') || urlParams.has('s');
+    const isSharedUrl = urlParams.has('shared') || urlParams.has('invite') || urlParams.has('s') || urlParams.has('shareData');
     const isPasswordReset = urlParams.has('reset-password') || window.location.hash.includes('type=recovery') || (hasAccessToken && tokenType === 'recovery');
     const isLocalhost = window.location.hostname === 'localhost' || 
                         window.location.hostname === '127.0.0.1' ||
@@ -405,6 +410,28 @@ export default function App() {
       window.history.replaceState({}, '', window.location.pathname);
     }
   }, []);
+
+  useEffect(() => {
+    if (!isAuthenticated || !currentUser) return;
+
+    const sharedPayload = sessionStorage.getItem(PENDING_SHARED_PAYLOAD_KEY);
+    if (!sharedPayload) return;
+
+    try {
+      const decoded = decodeURIComponent(sharedPayload);
+      const parsed = JSON.parse(decodeURIComponent(escape(atob(decoded))));
+
+      setUserQuestion(parsed.question || '');
+      setUploadedImageUrl(parsed.imageUrl || null);
+      setSharePrefillToken(`payload-${Date.now()}`);
+      setMode('prototype');
+      setCurrentScreen('home');
+      sessionStorage.removeItem(PENDING_SHARED_PAYLOAD_KEY);
+      window.history.replaceState({}, '', window.location.pathname);
+    } catch (error) {
+      console.error('Error processing direct shared payload after login:', error);
+    }
+  }, [currentUser, isAuthenticated]);
 
   useEffect(() => {
     if (!isAuthenticated || !currentUser) return;
