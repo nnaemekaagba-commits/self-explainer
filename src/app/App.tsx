@@ -117,6 +117,31 @@ export default function App() {
     inputBgColor: '#ffffff',
   });
 
+  const addSharedQuestionToInbox = (sharedQuestion: {
+    id: string;
+    question: string;
+    imageUrl?: string | null;
+    sharedBy?: string;
+    sharedAt?: string;
+  }) => {
+    const sessionId = getSessionId(currentUser?.id);
+    const storageKey = `shared_questions_${sessionId}`;
+    const existing = localStorage.getItem(storageKey);
+    const questions = existing ? JSON.parse(existing) : [];
+    const alreadyExists = questions.some((item: any) => item.id === sharedQuestion.id);
+
+    if (!alreadyExists) {
+      questions.unshift({
+        id: sharedQuestion.id,
+        question: sharedQuestion.question || '',
+        imageUrl: sharedQuestion.imageUrl || null,
+        sharedBy: sharedQuestion.sharedBy || 'A friend',
+        sharedAt: sharedQuestion.sharedAt || new Date().toLocaleString(),
+      });
+      localStorage.setItem(storageKey, JSON.stringify(questions));
+    }
+  };
+
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const inviteCode = urlParams.get('invite');
@@ -421,11 +446,20 @@ export default function App() {
       const decoded = decodeURIComponent(sharedPayload);
       const parsed = JSON.parse(decodeURIComponent(escape(atob(decoded))));
 
-      setUserQuestion(parsed.question || '');
-      setUploadedImageUrl(parsed.imageUrl || null);
-      setSharePrefillToken(`payload-${Date.now()}`);
+      const inboxQuestion = {
+        id: `payload-${Date.now()}`,
+        question: parsed.question || '',
+        imageUrl: parsed.imageUrl || null,
+        sharedBy: parsed.sharedBy || 'A friend',
+        sharedAt: new Date().toLocaleString(),
+      };
+
+      addSharedQuestionToInbox(inboxQuestion);
+      setUserQuestion(inboxQuestion.question);
+      setUploadedImageUrl(inboxQuestion.imageUrl || null);
+      setSharePrefillToken(inboxQuestion.id);
       setMode('prototype');
-      setCurrentScreen('home');
+      setCurrentScreen('shared-exercise');
       sessionStorage.removeItem(PENDING_SHARED_PAYLOAD_KEY);
       window.history.replaceState({}, '', window.location.pathname);
     } catch (error) {
@@ -450,11 +484,18 @@ export default function App() {
           await markActivityAsShared(sharedQuestion.activityLogId, sharedQuestion.sharedSessionId || undefined);
         }
 
+        addSharedQuestionToInbox({
+          id: sharedQuestion.id,
+          question: sharedQuestion.question || '',
+          imageUrl: sharedQuestion.imageUrl || null,
+          sharedBy: sharedQuestion.sharedBy || 'A friend',
+          sharedAt: sharedQuestion.sharedAt || new Date().toLocaleString(),
+        });
         setUserQuestion(sharedQuestion.question || '');
         setUploadedImageUrl(sharedQuestion.imageUrl || null);
         setSharePrefillToken(sharedQuestion.id);
         setMode('prototype');
-        setCurrentScreen('home');
+        setCurrentScreen('shared-exercise');
         sessionStorage.removeItem(PENDING_SHARED_QUESTION_ID_KEY);
       })
       .catch((error) => {
