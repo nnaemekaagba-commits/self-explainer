@@ -5,6 +5,7 @@ import { Share2, Info, Check } from 'lucide-react';
 import { useState } from 'react';
 import { copyToClipboard } from '../../utils/clipboard';
 import { createSharedQuestion } from '../../services/sharedQuestionService';
+import { getSessionId } from '../../services/sessionService';
 import { MathBackground } from './MathBackground';
 import { ActionButton } from './ActionButton';
 import { HomeIndicator } from './HomeIndicator';
@@ -34,6 +35,7 @@ interface HomeScreenProps {
   uploadedImageUrl: string | null;
   prefilledQuestion?: string;
   prefillToken?: string | null;
+  currentUserId?: string | null;
   currentUserName?: string;
 }
 
@@ -51,10 +53,30 @@ export function HomeScreen({
   uploadedImageUrl,
   prefilledQuestion,
   prefillToken,
+  currentUserId,
   currentUserName = 'You',
 }: HomeScreenProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
+
+  const saveToSharerSharedExercises = (sharedQuestion: {
+    id: string;
+    question: string;
+    imageUrl?: string | null;
+    sharedBy: string;
+    sharedAt: string;
+  }) => {
+    const sessionId = getSessionId(currentUserId);
+    const storageKey = `shared_questions_${sessionId}`;
+    const existing = localStorage.getItem(storageKey);
+    const questions = existing ? JSON.parse(existing) : [];
+    const alreadyExists = questions.some((item: any) => item.id === sharedQuestion.id);
+
+    if (!alreadyExists) {
+      questions.unshift(sharedQuestion);
+      localStorage.setItem(storageKey, JSON.stringify(questions));
+    }
+  };
 
   const buildDirectShareLink = (question: string, imageUrl: string | null) => {
     const fullPayload = {
@@ -89,6 +111,13 @@ export function HomeScreen({
         sharedBy: currentUserName,
       });
 
+      saveToSharerSharedExercises({
+        id: sharedQuestion.id,
+        question: sharedQuestion.question,
+        imageUrl: sharedQuestion.imageUrl || null,
+        sharedBy: sharedQuestion.sharedBy,
+        sharedAt: sharedQuestion.sharedAt,
+      });
       await copyToClipboard(link);
       setLinkCopied(true);
       console.log('Shared question stored on backend:', sharedQuestion);
@@ -97,6 +126,14 @@ export function HomeScreen({
       console.error('Backend share link failed, using direct-link fallback:', error);
 
       try {
+        const fallbackId = `local-share-${Date.now()}`;
+        saveToSharerSharedExercises({
+          id: fallbackId,
+          question,
+          imageUrl: uploadedImageUrl || null,
+          sharedBy: currentUserName,
+          sharedAt: new Date().toLocaleString(),
+        });
         const directLink = buildDirectShareLink(question, uploadedImageUrl);
         await copyToClipboard(directLink);
         setLinkCopied(true);

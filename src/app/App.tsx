@@ -691,6 +691,7 @@ export default function App() {
                 onInviteClick={() => setCurrentScreen('invite')}
                 onProfileClick={() => setCurrentScreen('profile')}
                 onSharedExerciseClick={() => navigateToScreen('shared-exercise')}
+                currentUserId={currentUser?.id || null}
                 currentUserName={currentUser?.email || 'You'}
                 onGenerateSolution={async () => {
                   // Get current input from MessageInput
