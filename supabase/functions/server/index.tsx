@@ -1562,6 +1562,53 @@ app.delete("/make-server-9063c65e/activities/:id", async (c) => {
   }
 });
 
+// Create a backend-backed shared question so links work across devices/browsers
+app.post("/make-server-9063c65e/shared-questions", async (c) => {
+  try {
+    const body = await c.req.json();
+    const sharedQuestionId = `sq_${crypto.randomUUID()}`;
+    const sharedQuestion = {
+      id: sharedQuestionId,
+      question: body.question || "",
+      imageUrl: body.imageUrl || null,
+      sharedBy: body.sharedBy || "Someone",
+      sharedAt: new Date().toISOString(),
+      activityLogId: body.activityLogId || null,
+      sharedSessionId: body.sharedSessionId || null
+    };
+
+    await kv.set(`shared-question:${sharedQuestionId}`, sharedQuestion);
+
+    return c.json({
+      success: true,
+      sharedQuestion
+    });
+  } catch (error) {
+    console.error("Error creating shared question:", error);
+    return c.json({ error: "Failed to create shared question" }, 500);
+  }
+});
+
+// Retrieve a previously shared question
+app.get("/make-server-9063c65e/shared-questions/:id", async (c) => {
+  try {
+    const sharedQuestionId = c.req.param("id");
+    const sharedQuestion = await kv.get(`shared-question:${sharedQuestionId}`);
+
+    if (!sharedQuestion) {
+      return c.json({ error: "Shared question not found" }, 404);
+    }
+
+    return c.json({
+      success: true,
+      sharedQuestion
+    });
+  } catch (error) {
+    console.error("Error fetching shared question:", error);
+    return c.json({ error: "Failed to fetch shared question" }, 500);
+  }
+});
+
 // Generate and save invite code
 app.post("/make-server-9063c65e/invite/generate", async (c) => {
   try {

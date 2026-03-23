@@ -39,9 +39,22 @@ interface MessageInputProps {
   onProblemSolved?: (data: any) => void;
   onQuestionSubmit?: (question: string, imageUrl?: string) => void;
   onGetCurrentInput?: (getter: () => string) => void;
+  initialQuestion?: string;
+  initialImageUrl?: string | null;
+  prefillToken?: string | null;
 }
 
-export function MessageInput({ placeholder = "Type your question or paste your problem here...", bgColor = "#ffffff", onNavigate, onProblemSolved, onQuestionSubmit, onGetCurrentInput }: MessageInputProps) {
+export function MessageInput({
+  placeholder = "Type your question or paste your problem here...",
+  bgColor = "#ffffff",
+  onNavigate,
+  onProblemSolved,
+  onQuestionSubmit,
+  onGetCurrentInput,
+  initialQuestion,
+  initialImageUrl,
+  prefillToken
+}: MessageInputProps) {
   const [showUploadMenu, setShowUploadMenu] = useState(false);
   const [inputValue, setInputValue] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
@@ -63,6 +76,12 @@ export function MessageInput({ placeholder = "Type your question or paste your p
       onGetCurrentInput(() => inputValueRef.current);
     }
   }, []); // Empty dependency array - only run once
+
+  useEffect(() => {
+    if (!prefillToken) return;
+    setInputValue(initialQuestion || '');
+    setUploadedImage(initialImageUrl || null);
+  }, [initialImageUrl, initialQuestion, prefillToken]);
 
   const handleSend = async () => {
     if (inputValue.trim() || uploadedImage) {

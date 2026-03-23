@@ -43,9 +43,15 @@ import { SharedExerciseScreen } from './components/SharedExerciseScreen';
 import { solveProblem, testConnection } from '../services/aiService';
 import { saveActivity } from '../services/archiveService';
 import { validateInviteCode } from '../services/inviteService';
+import { getSharedQuestion } from '../services/sharedQuestionService';
 import { getSessionId } from '../services/sessionService';
 import { checkSession, signOut, User } from '../services/authService';
 import { projectId, publicAnonKey } from '../../utils/supabase/info';
+
+const PENDING_INVITE_CODE_KEY = 'pending_invite_code';
+const PENDING_SHARED_QUESTION_ID_KEY = 'pending_shared_question_id';
+const PENDING_SHARED_ACTIVITY_ID_KEY = 'pending_shared_activity_id';
+const PENDING_SHARED_SESSION_ID_KEY = 'pending_shared_session_id';
 
 interface DesignConfig {
   heading: string;
@@ -95,6 +101,7 @@ export default function App() {
   const [showDiagnostics, setShowDiagnostics] = useState(false);
   // Loading state for solution generation
   const [isGeneratingSolution, setIsGeneratingSolution] = useState(false);
+  const [sharePrefillToken, setSharePrefillToken] = useState<string | null>(null);
   const [config, setConfig] = useState<DesignConfig>({
     heading: 'Explore the engineering thinking behind your coursework',
     placeholder: 'Type your question or paste your problem here...',
@@ -108,6 +115,27 @@ export default function App() {
     buttonBorderColor: 'gray-300',
     inputBgColor: '#ffffff',
   });
+
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const inviteCode = urlParams.get('invite');
+    const sharedQuestionId = urlParams.get('s');
+    const sharedActivityId = urlParams.get('shared');
+    const sharedSessionId = urlParams.get('session');
+
+    if (inviteCode) {
+      sessionStorage.setItem(PENDING_INVITE_CODE_KEY, inviteCode);
+    }
+    if (sharedQuestionId) {
+      sessionStorage.setItem(PENDING_SHARED_QUESTION_ID_KEY, sharedQuestionId);
+    }
+    if (sharedActivityId) {
+      sessionStorage.setItem(PENDING_SHARED_ACTIVITY_ID_KEY, sharedActivityId);
+    }
+    if (sharedSessionId) {
+      sessionStorage.setItem(PENDING_SHARED_SESSION_ID_KEY, sharedSessionId);
+    }
+  }, []);
 
   // Check authentication on mount
   useEffect(() => {
@@ -378,6 +406,35 @@ export default function App() {
     }
   }, []);
 
+  useEffect(() => {
+    if (!isAuthenticated || !currentUser) return;
+
+    const sharedQuestionId = sessionStorage.getItem(PENDING_SHARED_QUESTION_ID_KEY);
+    if (!sharedQuestionId) return;
+
+    getSharedQuestion(sharedQuestionId)
+      .then(async (sharedQuestion) => {
+        if (!sharedQuestion) {
+          return;
+        }
+
+        if (sharedQuestion.activityLogId) {
+          const { markActivityAsShared } = await import('../services/activityLogService');
+          await markActivityAsShared(sharedQuestion.activityLogId, sharedQuestion.sharedSessionId || undefined);
+        }
+
+        setUserQuestion(sharedQuestion.question || '');
+        setUploadedImageUrl(sharedQuestion.imageUrl || null);
+        setSharePrefillToken(sharedQuestion.id);
+        setMode('prototype');
+        setCurrentScreen('home');
+        sessionStorage.removeItem(PENDING_SHARED_QUESTION_ID_KEY);
+      })
+      .catch((error) => {
+        console.error('Error processing shared question after login:', error);
+      });
+  }, [currentUser, isAuthenticated]);
+
   // Handle question correction submission
   const handleQuestionCorrection = async (correctedQuestion: string, file?: File) => {
     console.log('Question correction received:', correctedQuestion, file);
@@ -619,6 +676,8 @@ export default function App() {
                 isGeneratingSolution={isGeneratingSolution}
                 getCurrentInput={getCurrentInput}
                 uploadedImageUrl={uploadedImageUrl}
+                prefilledQuestion={userQuestion}
+                prefillToken={sharePrefillToken}
               />
             ) : currentScreen === 'scaffolded' ? (
               <>
