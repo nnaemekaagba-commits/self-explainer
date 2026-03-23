@@ -117,6 +117,8 @@ export default function App() {
     inputBgColor: '#ffffff',
   });
 
+  const isAuthGateScreen = ['login', 'signup', 'forgot-password', 'reset-password'].includes(currentScreen);
+
   const addSharedQuestionToInbox = (sharedQuestion: {
     id: string;
     question: string;
@@ -437,7 +439,7 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    if (!isAuthenticated || !currentUser) return;
+    if (isCheckingAuth || isAuthGateScreen) return;
 
     const sharedPayload = sessionStorage.getItem(PENDING_SHARED_PAYLOAD_KEY);
     if (!sharedPayload) return;
@@ -465,10 +467,10 @@ export default function App() {
     } catch (error) {
       console.error('Error processing direct shared payload after login:', error);
     }
-  }, [currentUser, isAuthenticated]);
+  }, [currentScreen, currentUser, isAuthenticated, isCheckingAuth, isAuthGateScreen]);
 
   useEffect(() => {
-    if (!isAuthenticated || !currentUser) return;
+    if (isCheckingAuth || isAuthGateScreen) return;
 
     const sharedQuestionId = sessionStorage.getItem(PENDING_SHARED_QUESTION_ID_KEY);
     if (!sharedQuestionId) return;
@@ -501,7 +503,7 @@ export default function App() {
       .catch((error) => {
         console.error('Error processing shared question after login:', error);
       });
-  }, [currentUser, isAuthenticated]);
+  }, [currentScreen, currentUser, isAuthenticated, isCheckingAuth, isAuthGateScreen]);
 
   // Handle question correction submission
   const handleQuestionCorrection = async (correctedQuestion: string, file?: File) => {
