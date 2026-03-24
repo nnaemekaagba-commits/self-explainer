@@ -1,0 +1,3 @@
+# Genenrative AI-Supported Geometry, Linear Algebra, and Trigonometry Learning System
+This is a learning web App (**mobile version to come soon**) designed to support **precollege** engineering students' development of problem-solving skills by assessing their skill level, providing partial solution to a problem, and prompting them to complete the rest. The traces of students strategies and problem-solving performance are stored, which can help to understand their thinking and learning progress. 
+This System can best be described as an instructor's assistant, as it helps to support students and also gives instructors insights into students' thinking and learning strategies. 
