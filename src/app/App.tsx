@@ -22,7 +22,6 @@ import { PartiallyCorrectScreen } from './components/PartiallyCorrectScreen';
 import { ProfileScreen } from './components/ProfileScreen';
 import { SelfExplanationModal } from './components/SelfExplanationModal';
 import { SelfExplanationLearningScreen } from './components/SelfExplanationLearningScreen';
-import { QuestionCorrectionModal } from './components/QuestionCorrectionModal';
 import { ActivityLogScreen } from './components/ActivityLogScreen';
 import { StudentWorkScreen } from './components/StudentWorkScreen';
 import { EditableControls } from './components/EditableControls';
@@ -97,7 +96,6 @@ export default function App() {
   const [uploadedImageUrl, setUploadedImageUrl] = useState<string | null>(null);
   const [feedbackData, setFeedbackData] = useState<any>(null);
   const [showSelfExplanationModal, setShowSelfExplanationModal] = useState<boolean>(false);
-  const [showCorrectionModal, setShowCorrectionModal] = useState<boolean>(false);
   const [getCurrentInput, setGetCurrentInput] = useState<(() => string) | null>(null);
   const [currentActivityId, setCurrentActivityId] = useState<string | null>(null);
   const [currentActivityLogId, setCurrentActivityLogId] = useState<string | null>(null);
@@ -775,21 +773,12 @@ export default function App() {
                   onArchiveClick={() => navigateToScreen('archive')}
                   onInviteClick={() => navigateToScreen('invite')}
                   onStartLearning={handleStartLearning}
-                  onCorrectQuestion={() => setShowCorrectionModal(true)}
+                  onSubmitCorrection={(correctedQuestion) => handleQuestionCorrection(correctedQuestion)}
                   onMarkAsCorrect={() => navigateToScreen('scaffolded-active')}
                   aiData={aiData}
                   userQuestion={userQuestion}
                   uploadedImageUrl={uploadedImageUrl}
                 />
-                
-                {/* Question Correction Modal */}
-                <QuestionCorrectionModal
-                  isOpen={showCorrectionModal}
-                  onClose={() => setShowCorrectionModal(false)}
-                  currentQuestion={userQuestion}
-                  onSubmitCorrection={handleQuestionCorrection}
-                />
-                
                 <HomeIndicator />
               </>
             ) : currentScreen === 'scaffolded-active' ? (

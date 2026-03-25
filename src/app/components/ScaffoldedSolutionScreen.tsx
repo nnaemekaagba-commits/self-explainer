@@ -1,7 +1,7 @@
 import { ArrowLeft, CheckCircle2, Edit3 } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { MathRenderer } from './MathRenderer';
 import { ScreenNavigation } from './ScreenNavigation';
-import { useState } from 'react';
 
 interface ScaffoldedSolutionScreenProps {
   onBack: () => void;
@@ -9,29 +9,48 @@ interface ScaffoldedSolutionScreenProps {
   onArchiveClick?: () => void;
   onInviteClick?: () => void;
   onStartLearning?: () => void;
-  onCorrectQuestion?: () => void;
+  onSubmitCorrection?: (correctedQuestion: string) => void;
   onMarkAsCorrect?: () => void;
   aiData?: any;
   userQuestion?: string;
   uploadedImageUrl?: string | null;
 }
 
-export function ScaffoldedSolutionScreen({ onBack, onHomeClick, onArchiveClick, onInviteClick, onStartLearning, onCorrectQuestion, onMarkAsCorrect, aiData, userQuestion, uploadedImageUrl }: ScaffoldedSolutionScreenProps) {
-  console.log('🖼️ ScaffoldedSolutionScreen - uploadedImageUrl:', uploadedImageUrl);
-  console.log('📝 ScaffoldedSolutionScreen - userQuestion:', userQuestion);
-  
+export function ScaffoldedSolutionScreen({
+  onBack,
+  onHomeClick,
+  onArchiveClick,
+  onInviteClick,
+  onStartLearning,
+  onSubmitCorrection,
+  onMarkAsCorrect,
+  aiData,
+  userQuestion,
+  uploadedImageUrl,
+}: ScaffoldedSolutionScreenProps) {
   const [isQuestionConfirmed, setIsQuestionConfirmed] = useState(false);
+  const currentQuestionText = aiData?.extractedQuestion || userQuestion || '';
+  const [correctionText, setCorrectionText] = useState(currentQuestionText);
+
+  useEffect(() => {
+    setCorrectionText(currentQuestionText);
+  }, [currentQuestionText]);
 
   const handleMarkAsCorrect = () => {
     setIsQuestionConfirmed(true);
-    if (onMarkAsCorrect) {
-      onMarkAsCorrect();
-    }
+    onMarkAsCorrect?.();
   };
-  
+
+  const handleSubmitCorrection = () => {
+    const trimmedCorrection = correctionText.trim();
+    if (!trimmedCorrection) return;
+
+    setIsQuestionConfirmed(false);
+    onSubmitCorrection?.(trimmedCorrection);
+  };
+
   return (
     <>
-      {/* Top action icons */}
       <ScreenNavigation
         onInviteClick={onInviteClick}
         onHomeClick={onHomeClick}
@@ -39,7 +58,6 @@ export function ScaffoldedSolutionScreen({ onBack, onHomeClick, onArchiveClick, 
         showHomeIcon={true}
       />
 
-      {/* Header with back button */}
       <div className="h-[50px] flex items-center justify-between px-6 pt-2 border-b border-gray-200">
         <button onClick={onBack} className="flex items-center gap-2 text-blue-600 hover:text-blue-700">
           <ArrowLeft size={20} strokeWidth={2} />
@@ -49,36 +67,28 @@ export function ScaffoldedSolutionScreen({ onBack, onHomeClick, onArchiveClick, 
         <div className="w-16"></div>
       </div>
 
-      {/* Content area */}
       <div className="flex-1 overflow-y-auto px-6 py-6 pb-8">
         <div className="space-y-4">
           <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4">
             <h3 className="text-[15px] font-semibold text-blue-900 mb-2">Your Problem</h3>
-            
-            {/* Display uploaded image if available */}
+
             {uploadedImageUrl && (
               <div className="mb-3 flex justify-center">
-                <img 
-                  src={uploadedImageUrl} 
-                  alt="Problem" 
+                <img
+                  src={uploadedImageUrl}
+                  alt="Problem"
                   className="max-w-[400px] w-full h-auto rounded-xl border border-blue-300 shadow-sm object-contain"
                 />
               </div>
             )}
-            
-            {/* Display auto-generated diagram from AI */}
+
             {aiData?.diagram?.svg && (
               <div className="mb-4 bg-white border-2 border-blue-400 rounded-xl p-4 shadow-md">
                 <div className="flex items-center gap-2 mb-2">
                   <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
-                  <h4 className="text-[12px] font-semibold text-blue-900">
-                    AI-Generated Diagram
-                  </h4>
+                  <h4 className="text-[12px] font-semibold text-blue-900">AI-Generated Diagram</h4>
                 </div>
-                <div 
-                  className="flex justify-center"
-                  dangerouslySetInnerHTML={{ __html: aiData.diagram.svg }}
-                />
+                <div className="flex justify-center" dangerouslySetInnerHTML={{ __html: aiData.diagram.svg }} />
                 {aiData.diagram.description && (
                   <p className="text-[10px] text-gray-600 mt-2 text-center italic">
                     {aiData.diagram.description}
@@ -86,42 +96,58 @@ export function ScaffoldedSolutionScreen({ onBack, onHomeClick, onArchiveClick, 
                 )}
               </div>
             )}
-            
-            {/* Display AI-extracted question with diagram description */}
+
             <div className="text-[13px] text-blue-800 mb-3">
-              {aiData?.extractedQuestion ? (
-                <MathRenderer content={aiData.extractedQuestion} />
-              ) : userQuestion ? (
-                <MathRenderer content={userQuestion} />
-              ) : (
-                'No question provided'
-              )}
+              {currentQuestionText ? <MathRenderer content={currentQuestionText} /> : 'No question provided'}
             </div>
-            
-            {/* Show info if diagram was analyzed */}
+
             {uploadedImageUrl && aiData?.extractedQuestion && (
               <div className="bg-white/50 rounded-lg p-2 mb-3">
                 <p className="text-[11px] text-blue-700 font-medium">
-                  ✓ Diagram analyzed and description included above
+                  Diagram analyzed and description included above
                 </p>
               </div>
             )}
-            
-            <div className="flex gap-2">
-              <button
-                onClick={onCorrectQuestion}
-                className="px-4 py-2 bg-blue-600 text-white text-[13px] font-medium rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
-              >
-                <Edit3 size={14} />
-                <span>Correct Question</span>
-              </button>
-              <button
-                onClick={handleMarkAsCorrect}
-                className="px-4 py-2 bg-green-600 text-white text-[13px] font-medium rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2"
-              >
-                <CheckCircle2 size={14} />
-                <span>Correct</span>
-              </button>
+
+            <div className="space-y-3">
+              <div>
+                <label className="block text-[12px] font-semibold text-blue-900 mb-2">
+                  Correction Field
+                </label>
+                <textarea
+                  value={correctionText}
+                  onChange={(event) => setCorrectionText(event.target.value)}
+                  placeholder="Type any corrections to the problem here."
+                  className="w-full min-h-[110px] rounded-xl border border-blue-300 bg-white px-4 py-3 text-[13px] text-gray-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <p className="mt-2 text-[11px] text-blue-700">
+                  Edit the problem here, then update it so the system regenerates the strategy from your correction.
+                </p>
+              </div>
+
+              <div className="flex gap-2">
+                <button
+                  onClick={handleSubmitCorrection}
+                  disabled={!correctionText.trim()}
+                  className="px-4 py-2 bg-blue-600 text-white text-[13px] font-medium rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <Edit3 size={14} />
+                  <span>Update Question</span>
+                </button>
+                <button
+                  onClick={() => setCorrectionText(currentQuestionText)}
+                  className="px-4 py-2 bg-white text-blue-700 text-[13px] font-medium rounded-lg border border-blue-300 hover:bg-blue-50 transition-colors"
+                >
+                  Reset
+                </button>
+                <button
+                  onClick={handleMarkAsCorrect}
+                  className="px-4 py-2 bg-green-600 text-white text-[13px] font-medium rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2"
+                >
+                  <CheckCircle2 size={14} />
+                  <span>Correct</span>
+                </button>
+              </div>
             </div>
           </div>
 
@@ -132,7 +158,7 @@ export function ScaffoldedSolutionScreen({ onBack, onHomeClick, onArchiveClick, 
 
                 {aiData?.strategy && (
                   <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-3">
-                    <p className="text-[13px] text-blue-900 font-medium mb-1">🎯 Strategy</p>
+                    <p className="text-[13px] text-blue-900 font-medium mb-1">Strategy</p>
                     <div className="text-[13px] text-gray-700">
                       <MathRenderer content={aiData.strategy} />
                     </div>
