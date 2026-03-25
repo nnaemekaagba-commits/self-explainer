@@ -86,12 +86,12 @@ export function ScaffoldedSolutionScreen({
               <div className="mb-4 bg-white border-2 border-blue-400 rounded-xl p-4 shadow-md">
                 <div className="flex items-center gap-2 mb-2">
                   <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
-                  <h4 className="text-[12px] font-semibold text-blue-900">AI-Generated Diagram</h4>
+                  <h4 className="text-[12px] font-semibold text-blue-900">AI-Generated Diagram Hint</h4>
                 </div>
                 <div className="flex justify-center" dangerouslySetInnerHTML={{ __html: aiData.diagram.svg }} />
                 {aiData.diagram.description && (
                   <p className="text-[10px] text-gray-600 mt-2 text-center italic">
-                    {aiData.diagram.description}
+                    Visual hint only: use the diagram to orient yourself without treating it as a full solution.
                   </p>
                 )}
               </div>
@@ -104,7 +104,7 @@ export function ScaffoldedSolutionScreen({
             {uploadedImageUrl && aiData?.extractedQuestion && (
               <div className="bg-white/50 rounded-lg p-2 mb-3">
                 <p className="text-[11px] text-blue-700 font-medium">
-                  Diagram analyzed and description included above
+                  Diagram analyzed and converted into a visual hint above
                 </p>
               </div>
             )}

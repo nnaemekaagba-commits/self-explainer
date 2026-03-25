@@ -408,6 +408,9 @@ Requirements:
 - If it is statics or mechanics, prefer a free-body diagram or structural sketch.
 - If it is a circuit, use standard circuit symbols and label current/voltage directions clearly.
 - If it is geometry/algebra/calculus, show only the relevant graph, axes, shape, or labeled relationship.
+- This diagram is a visual hint, not a worked solution.
+- Do not show the final numerical answer, final solved equation, completed derivation, or any spoiler that finishes the problem for the student.
+- If math labels are needed, keep them to givens, variables, and structural relationships only.
 - Keep the image uncluttered, legible, and professional.
 - Use black, gray, and subtle accent colors only.
 - No decorative background, no photorealism, no watermark, no cartoon style.`;
@@ -2815,6 +2818,9 @@ Requirements:
 - Stay faithful to the requested problem context.
 - Prefer textbook clarity over artistic style.
 - Show only the needed objects, labels, arrows, dimensions, and symbols.
+- This should function as a hint-level educational visual, not a full worked solution.
+- Do not include the final answer, solved expression, completed proof, or step-by-step derivation in the image.
+- If text appears in the image, keep it minimal and limited to givens, variable labels, and short structural cues.
 - No extra scenery, no decoration, no photorealism.`;
 
     const result = await generateDiagramImage(enrichedDiagramPrompt, geminiKey, size, quality);
