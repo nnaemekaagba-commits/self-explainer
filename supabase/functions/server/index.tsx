@@ -410,6 +410,8 @@ Requirements:
 - If it is geometry/algebra/calculus, show only the relevant graph, axes, shape, or labeled relationship.
 - This diagram is a visual hint, not a worked solution.
 - Do not show the final numerical answer, final solved equation, completed derivation, or any spoiler that finishes the problem for the student.
+- Do not perform the current step for the student. Show setup only, not the completed result of this step.
+- Do not substitute through to a solved value, simplify to the final expression, or annotate the figure with conclusion text.
 - If math labels are needed, keep them to givens, variables, and structural relationships only.
 - Keep the image uncluttered, legible, and professional.
 - Use black, gray, and subtle accent colors only.
@@ -2820,6 +2822,7 @@ Requirements:
 - Show only the needed objects, labels, arrows, dimensions, and symbols.
 - This should function as a hint-level educational visual, not a full worked solution.
 - Do not include the final answer, solved expression, completed proof, or step-by-step derivation in the image.
+- Do not complete the requested step inside the image. The image should support thinking, not reveal the result.
 - If text appears in the image, keep it minimal and limited to givens, variable labels, and short structural cues.
 - No extra scenery, no decoration, no photorealism.`;
 

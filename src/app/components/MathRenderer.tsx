@@ -315,9 +315,18 @@ function buildBlocks(rawContent: string): Block[] {
 
 function renderMathIntoElement(container: HTMLElement, value: string, raw: string, displayMode: boolean) {
   container.className = displayMode ? 'math-display-block' : 'math-inline-block';
+  const sanitizedValue = sanitizeLatexExpression(value);
 
   try {
-    katex.render(sanitizeLatexExpression(value), container, {
+    katex.renderToString(sanitizedValue, {
+      displayMode,
+      throwOnError: true,
+      strict: false,
+      trust: false,
+      output: 'htmlAndMathml',
+    });
+
+    katex.render(sanitizedValue, container, {
       displayMode,
       throwOnError: true,
       strict: false,
