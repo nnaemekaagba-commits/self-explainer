@@ -65,6 +65,32 @@ function hintGivesAwayAnswer(hint: string): boolean {
   return /\bthe answer is\b|\btherefore\b|\bso the final answer\b|\byou get\b/i.test(hint);
 }
 
+function normalizeStepText(value: string): string {
+  return lower(value)
+    .replace(/\\\(|\\\)|\\\[|\\\]/g, " ")
+    .replace(/[^a-z0-9\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function wordOverlapRatio(a: string, b: string): number {
+  const wordsA = new Set(normalizeStepText(a).split(" ").filter(Boolean));
+  const wordsB = new Set(normalizeStepText(b).split(" ").filter(Boolean));
+  if (wordsA.size === 0 || wordsB.size === 0) return 0;
+
+  let overlap = 0;
+  wordsA.forEach((word) => {
+    if (wordsB.has(word)) overlap++;
+  });
+
+  return overlap / Math.max(wordsA.size, wordsB.size);
+}
+
+function isSimpleMathQuestion(question: string, topicInfo?: TopicInfo): boolean {
+  const combined = `${lower(question)} ${(topicInfo?.domain || "").toLowerCase()} ${(topicInfo?.subDomain || "").toLowerCase()}`;
+  return /\bsolve for\b|\blinear\b|\bequation\b|\bsimplify\b|\bevaluate\b|[a-z]\s*[+\-*/=]\s*\d|\d+\s*[+\-*/]\s*\d/.test(combined);
+}
+
 export function assessSolutionQuality(question: string, steps: any[], topicInfo?: TopicInfo): {
   allValid: boolean;
   issues: StepIssue[];
@@ -73,6 +99,10 @@ export function assessSolutionQuality(question: string, steps: any[], topicInfo?
 } {
   const issues: StepIssue[] = [];
   const expectedTerms = inferExpectedTerms(question, topicInfo);
+
+  if (steps.length < 3 && isSimpleMathQuestion(question, topicInfo)) {
+    issues.push({ stepIndex: 0, issue: "Simple math problem is not broken into enough distinct steps" });
+  }
 
   steps.forEach((step, index) => {
     const description = text(step.description);
@@ -117,8 +147,22 @@ export function assessSolutionQuality(question: string, steps: any[], topicInfo?
       }
     }
 
-    if (/x\s\d|\btimes\b|sum[a-z_]|Ã¢|Ã°/.test(`${description} ${formula} ${hint}`)) {
+    if (/x\s\d|\btimes\b|sum[a-z_]|ÃƒÂ¢|ÃƒÂ°/.test(`${description} ${formula} ${hint}`)) {
       issues.push({ stepIndex: index, issue: "Step still contains unprofessional math text or encoding artifacts" });
+    }
+
+    if (index > 0) {
+      const previousStep = steps[index - 1] || {};
+      const titleOverlap = wordOverlapRatio(text(step.title), text(previousStep.title));
+      const descriptionOverlap = wordOverlapRatio(description, text(previousStep.description));
+
+      if (titleOverlap > 0.8 && descriptionOverlap > 0.72) {
+        issues.push({ stepIndex: index, issue: "Step repeats the previous step instead of advancing the solution" });
+      }
+    }
+
+    if (wordOverlapRatio(description, hint) > 0.8) {
+      issues.push({ stepIndex: index, issue: "Hint is too similar to the description and does not create a distinct next action" });
     }
   });
 

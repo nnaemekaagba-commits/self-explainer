@@ -315,7 +315,10 @@ Return JSON with a single key called "steps".
 For every step:
 - Keep the title and overall intent.
 - Rewrite description so it SHOWS actual setup, substitution, and intermediate calculation work.
-- Do about 70% of the work, then stop before the final simple arithmetic or simplification.
+- Break the solution into the smallest meaningful next steps that make sense for the problem.
+- For simple math, prefer 3-4 short distinct steps rather than 1-2 oversized steps.
+- Each step must advance the solution and must not repeat the previous step in slightly different words.
+- Do enough work to be helpful, but stop before the final simple arithmetic or simplification for that step.
 - Keep formula non-empty and in LaTeX.
 - Keep formula as equations only. Do not include prose labels like "Ohm's law" or "equilibrium conditions".
 - Keep hint as a direct question asking the student to finish the remaining 30%.
@@ -704,7 +707,11 @@ EXAMPLE: If a step involves calculating force on 4 legs from 588N total:
 
 ADDITIONAL REQUIREMENTS:
 
-1. GENERATE ONLY 3-6 STEPS MAXIMUM - Keep concise to avoid response truncation!
+1. GENERATE A SENSIBLE NUMBER OF DISTINCT STEPS.
+   - For simple arithmetic or one-variable algebra, usually use 3-4 small steps.
+   - For moderate problems, usually use 4-6 steps.
+   - For more complex problems, use as many steps as needed, but keep each step focused on one meaningful action.
+   - Never merge multiple meaningful algebra moves into one repeated step.
 2. In your JSON response, EVERY step MUST have a non-empty 'formula' field with at least one equation in LaTeX format. 
 3. For physics/geometry/circuit/engineering steps, ALSO include a detailed 'diagram' field describing what to visualize. 
 4. DO NOT leave these fields empty - students need this scaffolding!
