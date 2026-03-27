@@ -227,6 +227,7 @@ export function HomeScreen({
             initialQuestion={prefilledQuestion}
             initialImageUrl={uploadedImageUrl}
             prefillToken={prefillToken}
+            showSendButton={false}
           />
 
           <div className="w-full flex flex-col gap-3">

@@ -42,6 +42,7 @@ interface MessageInputProps {
   initialQuestion?: string;
   initialImageUrl?: string | null;
   prefillToken?: string | null;
+  showSendButton?: boolean;
 }
 
 export function MessageInput({
@@ -53,7 +54,8 @@ export function MessageInput({
   onGetCurrentInput,
   initialQuestion,
   initialImageUrl,
-  prefillToken
+  prefillToken,
+  showSendButton = true
 }: MessageInputProps) {
   const [showUploadMenu, setShowUploadMenu] = useState(false);
   const [inputValue, setInputValue] = useState('');
@@ -379,23 +381,25 @@ export function MessageInput({
                 rows={uploadedImage ? 2 : 3}
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
-                className={`w-full py-3 px-3 pr-12 rounded-2xl border outline-none text-[12px] text-gray-900 placeholder:text-gray-500 resize-none ${
+                className={`w-full py-3 px-3 ${showSendButton ? 'pr-12' : 'pr-3'} rounded-2xl border outline-none text-[12px] text-gray-900 placeholder:text-gray-500 resize-none ${
                   uploadedImage ? 'border-purple-300 bg-white shadow-sm' : 'border-transparent'
                 }`}
                 style={!uploadedImage ? { backgroundColor: bgColor } : undefined}
               />
             </div>
-            <button
-              onClick={handleSend}
-              disabled={inputValue.trim() === '' && !uploadedImage}
-              className={`absolute right-3 bottom-3 w-8 h-8 flex items-center justify-center rounded-full transition-all duration-200 shadow-md ${
-                inputValue.trim() === '' && !uploadedImage
-                  ? 'bg-gray-300 cursor-not-allowed'
-                  : 'bg-blue-600 hover:bg-blue-700 active:bg-blue-800 hover:scale-110'
-              }`}
-            >
-              <Send size={16} className={inputValue.trim() === '' && !uploadedImage ? 'text-gray-400' : 'text-white'} />
-            </button>
+            {showSendButton ? (
+              <button
+                onClick={handleSend}
+                disabled={inputValue.trim() === '' && !uploadedImage}
+                className={`absolute right-3 bottom-3 w-8 h-8 flex items-center justify-center rounded-full transition-all duration-200 shadow-md ${
+                  inputValue.trim() === '' && !uploadedImage
+                    ? 'bg-gray-300 cursor-not-allowed'
+                    : 'bg-blue-600 hover:bg-blue-700 active:bg-blue-800 hover:scale-110'
+                }`}
+              >
+                <Send size={16} className={inputValue.trim() === '' && !uploadedImage ? 'text-gray-400' : 'text-white'} />
+              </button>
+            ) : null}
           </>
         )}
       </div>
