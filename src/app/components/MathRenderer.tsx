@@ -83,6 +83,8 @@ function normalizeContent(raw: string): string {
   return unescapeLatexDelimiters(fixBrokenSymbols(raw))
     .replace(/```(?:latex|math)?\s*([\s\S]*?)```/gi, '$1')
     .replace(/&nbsp;/gi, ' ')
+    .replace(/[ \t]+\n/g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
     .replace(/\r\n/g, '\n')
     .trim();
 }
@@ -419,5 +421,5 @@ export function MathRenderer({ content, className }: MathRendererProps) {
     }
   }, [content]);
 
-  return <div ref={containerRef} className={`math-content ${className || ''}`} />;
+  return <div ref={containerRef} className={`math-content antialiased ${className || ''}`} />;
 }

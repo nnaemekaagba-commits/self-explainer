@@ -49,7 +49,7 @@ export function ScaffoldedSolutionScreenActive({ onBack, onHomeClick, onArchiveC
         <div className="space-y-4">
           {/* Problem Verification - Verified State */}
           <div className="bg-green-50 border border-green-200 rounded-2xl p-4">
-            <h3 className="text-[15px] font-semibold text-green-900 mb-2">✓ Problem Verified</h3>
+            <h3 className="text-[15px] font-semibold text-green-900 mb-2">Problem Verified</h3>
             <div className="text-[13px] text-green-800 mb-2">
               {userQuestion ? (
                 <MathRenderer content={userQuestion} />
@@ -68,7 +68,7 @@ export function ScaffoldedSolutionScreenActive({ onBack, onHomeClick, onArchiveC
 
             {aiData?.strategy && (
               <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-3">
-                <p className="text-[13px] text-blue-900 font-medium mb-1">🎯 Strategy</p>
+                <p className="text-[13px] text-blue-900 font-medium mb-1">Strategy</p>
                 <div className="text-[13px] text-gray-700">
                   <MathRenderer content={aiData.strategy} />
                 </div>
@@ -103,13 +103,13 @@ export function ScaffoldedSolutionScreenActive({ onBack, onHomeClick, onArchiveC
                 {expandedSteps.includes(index + 1) && (
                   <div className="px-4 pb-4 pt-0 ml-8">
                     <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                      <p className="text-[12px] text-blue-900 font-medium mb-2">📝 Details:</p>
+                      <p className="text-[12px] text-blue-900 font-medium mb-2">Details</p>
                       <div className="text-[12px] text-blue-800">
                         <MathRenderer content={step.description} />
                       </div>
                       {step.hint && (
                         <div className="mt-2 p-2 bg-yellow-50 border border-yellow-300 rounded">
-                          <p className="text-[11px] text-yellow-700 font-medium mb-1">💡 Hint:</p>
+                          <p className="text-[11px] text-yellow-700 font-medium mb-1">Hint</p>
                           <div className="text-[12px] text-gray-700">
                             <MathRenderer content={step.hint} />
                           </div>
@@ -118,8 +118,8 @@ export function ScaffoldedSolutionScreenActive({ onBack, onHomeClick, onArchiveC
                       {step.formula && (
                         <div className="mt-2 p-5 bg-gradient-to-br from-purple-100 via-purple-50 to-blue-100 rounded-xl border-4 border-purple-600 shadow-xl formula-box">
                           <p className="text-[15px] text-purple-900 font-black mb-4 flex items-center gap-2" style={{ fontWeight: 900 }}>
-                            <span className="text-2xl">📐</span> 
-                            <span className="uppercase tracking-widest">KEY FORMULA</span>
+                            <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-white text-sm text-purple-700 shadow-sm">f(x)</span>
+                            <span className="uppercase tracking-[0.22em]">Key Formula</span>
                           </p>
                           <div className="text-[23px] font-extrabold bg-white p-6 rounded-xl shadow-inner border-2 border-purple-300" style={{ fontWeight: 900 }}>
                             <MathRenderer content={step.formula} />
@@ -315,3 +315,5 @@ export function ScaffoldedSolutionScreenActive({ onBack, onHomeClick, onArchiveC
     </>
   );
 }
+
+

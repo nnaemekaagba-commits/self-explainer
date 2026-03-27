@@ -309,8 +309,8 @@ export function InteractiveGuidedSolution({
           {step.formula && (
             <div className="p-6 bg-gradient-to-br from-purple-100 via-purple-50 to-blue-100 border-4 border-purple-600 rounded-2xl shadow-xl formula-box">
               <p className="text-[16px] text-purple-900 font-black mb-5 flex items-center gap-2.5" style={{ fontWeight: 900 }}>
-                <span className="text-3xl">📐</span> 
-                <span className="uppercase tracking-widest">KEY FORMULA</span>
+                <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white text-sm text-purple-700 shadow-sm">f(x)</span>
+                <span className="uppercase tracking-[0.22em]">Key Formula</span>
               </p>
               <div className="text-[24px] text-gray-900 font-extrabold bg-white p-7 rounded-2xl shadow-inner border-2 border-purple-300" style={{ fontWeight: 900 }}>
                 <MathRenderer content={step.formula} />
@@ -674,3 +674,5 @@ export function InteractiveGuidedSolution({
     </>
   );
 }
+
+

@@ -231,7 +231,7 @@ export const StepFeedbackScreen = ({
             />
           ) : feedbackData?.answerImageUrl ? (
             <div className="mt-1">
-              <p className="text-[9px] text-gray-600 mb-1">📸 Uploaded answer:</p>
+              <p className="text-[9px] text-gray-600 mb-1">Uploaded answer:</p>
               <img 
                 src={feedbackData.answerImageUrl} 
                 alt="Student's answer" 
@@ -249,12 +249,12 @@ export const StepFeedbackScreen = ({
               <p className={`text-[9px] font-medium mb-0.5 ${
                 answerCorrect ? 'text-green-600' : 'text-orange-600'
               }`}>
-                {answerCorrect ? '✓ FEEDBACK' : '⚠️ FEEDBACK'}
+                {answerCorrect ? 'Feedback' : 'Review'}
               </p>
               <MathRenderer content={feedbackData.answerFeedback || feedbackData.feedback || ''} className="text-[10px] text-gray-700 leading-tight" />
               {feedbackData.diagram && (
                 <div className="mt-2 border border-gray-200 rounded p-2 bg-gray-50">
-                  <p className="text-[8px] text-gray-600 mb-1">📊 Explanatory Diagram: {feedbackData.diagram.concept}</p>
+                  <p className="text-[8px] text-gray-600 mb-1">Explanatory diagram: {feedbackData.diagram.concept}</p>
                   {feedbackData.diagram.imageUrl ? (
                     <img
                       src={feedbackData.diagram.imageUrl}
@@ -290,7 +290,7 @@ export const StepFeedbackScreen = ({
             <MathRenderer content={feedbackData.userExplanation} className="text-[10px] text-gray-700 leading-tight mb-0.5" />
           ) : feedbackData?.explanationImageUrl ? (
             <div className="mt-1">
-              <p className="text-[9px] text-gray-600 mb-1">📸 Uploaded explanation:</p>
+              <p className="text-[9px] text-gray-600 mb-1">Uploaded explanation:</p>
               <img 
                 src={feedbackData.explanationImageUrl} 
                 alt="Student's explanation" 
@@ -308,12 +308,12 @@ export const StepFeedbackScreen = ({
               <p className={`text-[9px] font-medium mb-0.5 ${
                 explanationCorrect ? 'text-green-600' : 'text-orange-600'
               }`}>
-                {explanationCorrect ? '✓ FEEDBACK' : '⚠️ FEEDBACK'}
+                {explanationCorrect ? 'Feedback' : 'Review'}
               </p>
               <MathRenderer content={feedbackData.explanationFeedback || feedbackData.feedback || ''} className="text-[10px] text-gray-700 leading-tight" />
               {feedbackData.diagram && (
                 <div className="mt-2 border border-gray-200 rounded p-2 bg-gray-50">
-                  <p className="text-[8px] text-gray-600 mb-1">📊 Explanatory Diagram: {feedbackData.diagram.concept}</p>
+                  <p className="text-[8px] text-gray-600 mb-1">Explanatory diagram: {feedbackData.diagram.concept}</p>
                   {feedbackData.diagram.imageUrl ? (
                     <img
                       src={feedbackData.diagram.imageUrl}
@@ -544,3 +544,5 @@ export const StepFeedbackScreen = ({
     </div>
   );
 };
+
+
