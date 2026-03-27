@@ -17,6 +17,8 @@ FOR EACH STEP:
 - Use professional mathematical notation.
 - End with a hint that asks for the student's next meaningful move.
 - Keep the step focused on one action only.
+- In step 1, ask for the first setup move or algebraic move, not the final answer.
+- Before the last step, never ask "what is x?" or any equivalent final-target question.
 
 STEP COUNT:
 - For simple problems, prefer 3-4 short steps.
@@ -27,9 +29,17 @@ GOOD EXAMPLE:
 "description": "Using vertical equilibrium, \\\\[\\\\sum F_y = 0\\\\]. This gives \\\\(N_1 + N_2 + N_3 + N_4 = 588\\\\,\\\\text{N}\\\\)."
 "hint": "If the load is shared equally, what equation in \\\\(N\\\\) should you write next?"
 
+GOOD SIMPLE-ALGEBRA EXAMPLE:
+"description": "Start with \\\\(2x + 5 = 15\\\\). Subtract \\\\(5\\\\) from both sides to get \\\\(2x = 10\\\\)."
+"hint": "What operation should you do next to isolate \\\\(x\\\\)?"
+
 BAD EXAMPLE:
 "description": "Each leg supports \\\\(147\\\\,\\\\text{N}\\\\)."
 "hint": "That is the answer."
+
+BAD SIMPLE-ALGEBRA EXAMPLE:
+"description": "From \\\\(2x + 5 = 15\\\\), the answer is \\\\(x = 5\\\\)."
+"hint": "What is \\\\(x\\\\)?"
 
 RETURN JSON:
 {
@@ -100,8 +110,11 @@ CRITICAL REMINDER:
 GOOD:
 - "Using \\\\(W = mg\\\\), \\\\(W = (60)(9.8) = 588\\\\,\\\\text{N}\\\\). From equilibrium, \\\\(N_1 + N_2 + N_3 + N_4 = 588\\\\,\\\\text{N}\\\\)."
 - "If the load is equal on each leg, what equation in \\\\(N\\\\) comes next?"
+- "From \\\\(2x + 5 = 15\\\\), subtract \\\\(5\\\\) from both sides to get \\\\(2x = 10\\\\)."
+- "What should you do next to isolate \\\\(x\\\\)?"
 
 BAD:
 - "The answer is \\\\(147\\\\,\\\\text{N}\\\\)."
 - "Calculate it."
+- "What is \\\\(x\\\\)?" in the first step of a multi-step solution.
 `;

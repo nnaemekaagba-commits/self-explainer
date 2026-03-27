@@ -318,10 +318,12 @@ For every step:
 - Break the solution into the smallest meaningful next steps that make sense for the problem.
 - For simple math, prefer 3-4 short distinct steps rather than 1-2 oversized steps.
 - Each step must advance the solution and must not repeat the previous step in slightly different words.
+- In early steps, ask for the next operation, not the final target value.
+- For step 1 of a multi-step math problem, do not ask "what is x?" or any equivalent final-answer question.
 - Do enough work to be helpful, but stop before the final simple arithmetic or simplification for that step.
 - Keep formula non-empty and in LaTeX.
 - Keep formula as equations only. Do not include prose labels like "Ohm's law" or "equilibrium conditions".
-- Keep hint as a direct question asking the student to finish the remaining 30%.
+- Keep hint as a direct question asking for the next partial move, not the final answer unless it is the last step.
 - Use the correct governing equations for the domain. If the problem is engineering or physics, include units in the worked calculations.
 - Use domain-specific terminology naturally in the title, description, and hint.
 - Never return a complete final answer unless the step is purely conceptual.
@@ -748,7 +750,13 @@ ${LATEX_PROFESSIONAL_STANDARDS}
 
 ${SIMPLE_REMINDER}
 
-${VERIFICATION_PROTOCOL}`
+${VERIFICATION_PROTOCOL}
+
+CRITICAL STEP-BY-STEP RULES:
+- Break the partial solution into a sequence of distinct steps.
+- Step 1 must ask for the first setup move or first algebraic transformation, not the final answer.
+- For simple algebra, do not jump from the original equation to "what is x?" in the first step.
+- Every hint before the last step must ask only for the next move in the series.`
             }
           ];
         }

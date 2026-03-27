@@ -91,6 +91,33 @@ function isSimpleMathQuestion(question: string, topicInfo?: TopicInfo): boolean 
   return /\bsolve for\b|\blinear\b|\bequation\b|\bsimplify\b|\bevaluate\b|[a-z]\s*[+\-*/=]\s*\d|\d+\s*[+\-*/]\s*\d/.test(combined);
 }
 
+function inferTargetVariable(question: string): string | null {
+  const solveForMatch = text(question).match(/\bsolve\s+for\s+([a-z])\b/i);
+  if (solveForMatch) {
+    return solveForMatch[1].toLowerCase();
+  }
+
+  const findMatch = text(question).match(/\bfind\s+([a-z])\b/i);
+  if (findMatch) {
+    return findMatch[1].toLowerCase();
+  }
+
+  return null;
+}
+
+function hintAsksForFinalTarget(hint: string, targetVariable: string | null): boolean {
+  if (!targetVariable) return false;
+  const normalizedHint = lower(hint);
+  return new RegExp(`\\bwhat\\s+is\\s+${targetVariable}\\b|\\bfind\\s+${targetVariable}\\b|\\bsolve\\s+for\\s+${targetVariable}\\b|\\bvalue\\s+of\\s+${targetVariable}\\b`).test(normalizedHint);
+}
+
+function descriptionLooksFullySolved(description: string, targetVariable: string | null): boolean {
+  if (!targetVariable) return false;
+  const normalizedDescription = lower(description);
+  return new RegExp(`\\b${targetVariable}\\s*=\\s*[-+]?\\d`).test(normalizedDescription)
+    && !/\bstart with\b|\bset up\b|\bsubstitute\b|\busing\b|\bfrom\b/.test(normalizedDescription);
+}
+
 export function assessSolutionQuality(question: string, steps: any[], topicInfo?: TopicInfo): {
   allValid: boolean;
   issues: StepIssue[];
@@ -99,8 +126,10 @@ export function assessSolutionQuality(question: string, steps: any[], topicInfo?
 } {
   const issues: StepIssue[] = [];
   const expectedTerms = inferExpectedTerms(question, topicInfo);
+  const simpleMathQuestion = isSimpleMathQuestion(question, topicInfo);
+  const targetVariable = inferTargetVariable(question);
 
-  if (steps.length < 3 && isSimpleMathQuestion(question, topicInfo)) {
+  if (steps.length < 3 && simpleMathQuestion) {
     issues.push({ stepIndex: 0, issue: "Simple math problem is not broken into enough distinct steps" });
   }
 
@@ -127,6 +156,14 @@ export function assessSolutionQuality(question: string, steps: any[], topicInfo?
 
     if (hintGivesAwayAnswer(hint)) {
       issues.push({ stepIndex: index, issue: "Hint appears to give away the final answer" });
+    }
+
+    if (simpleMathQuestion && index < Math.max(steps.length - 1, 1) && hintAsksForFinalTarget(hint, targetVariable)) {
+      issues.push({ stepIndex: index, issue: "Hint asks for the final target too early instead of the next partial step" });
+    }
+
+    if (simpleMathQuestion && index < Math.max(steps.length - 1, 1) && descriptionLooksFullySolved(description, targetVariable)) {
+      issues.push({ stepIndex: index, issue: "Description appears to solve for the final target too early" });
     }
 
     if (/(engineering|physics|mechanical|electrical|civil|chemical)/i.test(`${topicInfo?.domain || ""}`) && /\d/.test(description) && !hasUnits(description)) {
