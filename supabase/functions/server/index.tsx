@@ -208,7 +208,7 @@ function buildDomainSpecificScaffoldRules(question: string, topicInfo: any): str
 - Use member-force notation like \\(F_{AB}\\), \\(F_{AC}\\), \\(R_A\\), and \\(N_B\\).
 - Never write malformed statics text like \\thet, F_[AB], or "\\sum F_x = 0:".
 - If the problem does not provide enough geometry or angle information, do NOT invent it. Derive symbolic equilibrium equations first and state that numerical member forces require the missing geometry.
-- Do 70% of the setup and algebra, then leave the final simple solve step for the student.`;
+- Do enough setup and early algebra to make the next move clear, then stop before the final simplification or final answer.`;
   }
 
   if (/\b(circuit|kvl|kcl|current|voltage|resistor|ohm)\b/.test(combined)) {
@@ -658,7 +658,7 @@ app.post("/make-server-9063c65e/solve-problem", async (c) => {
             userPrompt = IMAGE_WITH_TEXT_PROMPT(question);
             console.log("Combining image with user text:", question);
           } else {
-            userPrompt = `Carefully analyze this image and extract ALL information from it.\n\nThe image may contain:\n- Diagrams (mechanical systems, circuits, free body diagrams, etc.)\n- Mathematical equations or formulas written on the image\n- Physics scenarios (e.g., "a 60kg man standing on a table", "a ball rolling down an incline")\n- Geometric figures with measurements and labels\n- Graphs, charts, or data plots\n\nProvide a COMPLETE description of:\n1. What objects/elements are shown (with their properties like mass, dimensions, angles)\n2. The physical setup or scenario depicted\n3. What measurements, values, or equations are visible\n4. What the diagram is asking you to find or calculate\n\nThen create a guided solution based on this complete description.`;
+            userPrompt = `Carefully analyze this image and extract ALL information from it.\n\nThe image may contain:\n- Diagrams (mechanical systems, circuits, free body diagrams, etc.)\n- Mathematical equations or formulas written on the image\n- Physics scenarios (e.g., "a 60kg man standing on a table", "a ball rolling down an incline")\n- Geometric figures with measurements and labels\n- Graphs, charts, or data plots\n\nProvide a COMPLETE description of:\n1. What objects/elements are shown (with their properties like mass, dimensions, angles)\n2. The physical setup or scenario depicted\n3. What measurements, values, or equations are visible\n4. What the diagram is asking you to find or calculate\n\nThen create a partial guided solution based on this complete description. Show setup and early solving moves only, then stop before the final answer.`;
             // Use improved vision prompt that extracts BOTH text and visuals
             userPrompt = IMAGE_EXTRACTION_PROMPT;
             console.log("Processing image only - will extract BOTH complete text AND diagrams");
@@ -695,13 +695,13 @@ app.post("/make-server-9063c65e/solve-problem", async (c) => {
 THIS IS THE PRIMARY GOAL OF THE APPLICATION - NON-NEGOTIABLE:
 
 For EVERY SINGLE STEP:
-✓ YOU must DO 70% of the mathematical work (setup, substitute, calculate)
-✓ STUDENT completes the final 30% (simple arithmetic or final simplification)
+✓ YOU must do only a helpful partial setup or partial calculation
+✓ STUDENT must still do the next meaningful move and the final answer
 ✗ NEVER give complete final answers
 ✗ NEVER just give instructions
 
 EXAMPLE: If a step involves calculating force on 4 legs from 588N total:
-✓ CORRECT: "We have \\(4N = 588\\,\\text{N}\\)" then hint: "Divide 588 by 4. What is N?"
+✓ CORRECT: "We have \\(N_1 + N_2 + N_3 + N_4 = 588\\,\\text{N}\\)" then hint: "If the load is shared equally, what equation in \\(N\\) do you get?"
 ✗ WRONG: "Each leg supports \\(N = 147\\,\\text{N}\\)" (complete answer - FORBIDDEN!)
 ✗ WRONG: "Calculate the force on each leg" (just instructions - FORBIDDEN!)
 
@@ -2859,3 +2859,4 @@ Requirements:
 });
 
 Deno.serve(app.fetch);
+

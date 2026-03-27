@@ -1,105 +1,80 @@
-// AI Prompt constants for the scaffolded learning system
+// AI prompt constants for the scaffolded learning system
 
 export const SCAFFOLDING_REQUIREMENTS = `
-CRITICAL: YOU MUST WORK THROUGH PART OF EACH PROBLEM STEP
+CRITICAL: YOU MUST GIVE ONLY A PARTIAL SOLUTION.
 
-YOUR ROLE: Work through the first part of each step, then prompt students to complete it
+YOUR ROLE:
+- Do enough setup and early reasoning to help the student begin correctly.
+- Stop before the problem is finished.
+- Ask the student to perform the next meaningful step.
 
-ABSOLUTELY MANDATORY - SHOW 70-80% OF THE MATHEMATICAL WORK
+NON-NEGOTIABLE RULES:
+- NEVER give the final numeric answer.
+- NEVER give the final simplified expression.
+- NEVER complete the final proof or conclusion.
+- NEVER solve every algebraic step from start to finish.
+- NEVER give only vague instructions; show some real work first.
 
-YOU ARE NOT A TEXTBOOK. YOU ARE A TUTOR WHO SOLVES PROBLEMS ALONGSIDE STUDENTS.
+WHAT GOOD SCAFFOLDING LOOKS LIKE:
+- Set up the right equation or identity.
+- Substitute known values.
+- Perform one or two meaningful algebraic or arithmetic moves.
+- Stop while there is still meaningful student work left.
 
-This means:
-- YOU perform calculations with actual numbers, written in LaTeX, e.g. \\\\(60 \\\\times 9.8 = 588\\\\)
-- YOU show algebraic manipulations, written in LaTeX, e.g. \\\\(4N = 588\\\\), so \\\\(N = \\\\frac{588}{4}\\\\)
-- YOU substitute values into formulas in LaTeX, e.g. \\\\(KE = \\\\frac{1}{2}mv^2 = \\\\frac{1}{2}(5)(15)^2 = \\\\frac{1}{2}(5)(225)\\\\)
-- YOU simplify expressions in LaTeX, e.g. \\\\(\\\\frac{1}{2}(5)(225) = 2.5 \\\\times 225\\\\)
-- STUDENTS only complete the final simple step, e.g. \\\\(2.5 \\\\times 225 = 562.5\\\\,\\\\text{J}\\\\)
+HOW MUCH TO SHOW:
+- Simple arithmetic or one-variable algebra: usually 3-4 short steps total across the whole solution.
+- Moderate problems: usually 4-6 focused steps.
+- Complex problems: use more steps if needed, but each step should do only one meaningful thing.
 
-- NEVER tell students "calculate this" without DOING most of it first
-- NEVER say "apply the formula" without SHOWING the formula being applied
-- NEVER say "solve for X" without SHOWING the solving steps
-- NEVER give instructions - GIVE PARTIAL SOLUTIONS
+WHAT THE "description" FIELD MUST DO:
+- Show actual setup or calculation in proper LaTeX.
+- Use domain-specific vocabulary.
+- Advance the problem, but stop before the answer is fully determined.
 
-MANDATORY: IDENTIFY THE DOMAIN AND USE DOMAIN-SPECIFIC TERMINOLOGY:
+GOOD description examples:
+- "Using vertical equilibrium, \\\\[\\\\sum F_y = 0\\\\]. This gives \\\\(N_1 + N_2 + N_3 + N_4 = 588\\\\,\\\\text{N}\\\\)."
+- "Substitute into the quadratic formula: \\\\(x = \\\\frac{-6 \\\\pm \\\\sqrt{36 - 32}}{4} = \\\\frac{-6 \\\\pm \\\\sqrt{4}}{4}\\\\)."
+- "Use \\\\(KE = \\\\frac{1}{2}mv^2\\\\) with \\\\(m=5\\\\) and \\\\(v=15\\\\): \\\\(KE = \\\\frac{1}{2}(5)(15)^2\\\\)."
 
-Before generating steps, identify the problem domain:
-- Mechanical Engineering: Use terms like "free body diagram", "equilibrium", "moments", "stress", "strain", "kinematics", "dynamics", "statics", "torque", "friction"
-- Electrical Engineering: Use terms like "Kirchhoff's laws", "impedance", "current", "voltage", "power dissipation", "circuit analysis", "Ohm's law", "node voltage", "mesh current"
-- Civil Engineering: Use terms like "load distribution", "structural analysis", "beam deflection", "shear force", "bending moment", "stress concentration"
-- Chemical Engineering: Use terms like "mass balance", "energy balance", "thermodynamics", "reaction kinetics", "heat transfer", "stoichiometry"
-- Computer Science/Algorithms: Use terms like "time complexity", "space complexity", "algorithmic efficiency", "data structures", "Big O notation"
-- Physics: Use terms like "conservation of energy", "momentum", "force analysis", "work-energy theorem", "impulse", "projectile motion"
-- Mathematics: Use terms like "algebraic manipulation", "derivative", "integral", "geometric properties", "factoring", "substitution"
+BAD description examples:
+- "Calculate the answer."
+- "Use the formula."
+- "The answer is 147 N."
 
-EVERY step must reference the appropriate domain-specific terminology in both description and hint fields!
+WHAT THE "hint" FIELD MUST DO:
+- Ask for the next meaningful move.
+- Be specific about what the student should do next.
+- Do not reveal the final answer.
 
-WHAT YOU MUST DO IN THE "description" FIELD:
+GOOD hint examples:
+- "If the four leg forces are equal, what equation in \\\\(N\\\\) should you write next?"
+- "What does \\\\(\\\\sqrt{4}\\\\) become, and what two branches does that create for \\\\(x\\\\)?"
+- "Which factor should you simplify first in \\\\(\\\\frac{1}{2}(5)(15)^2\\\\)?"
 
-CRITICAL: SHOW ACTUAL CALCULATIONS WITH REAL NUMBERS - NOT JUST INSTRUCTIONS!
+WHAT THE "formula" FIELD MUST DO:
+- Every step must include at least one relevant equation in LaTeX.
+- Use only equations, not prose labels.
+- Prefer \\\\[ ... \\\\] for standalone equations and \\\\( ... \\\\) for short inline relations.
 
-1. PERFORM CALCULATIONS - Show the actual arithmetic:
-   - CORRECT: "Let's calculate weight using statics principles: \\\\(W = mg = (60 \\\\text{ kg})(9.8 \\\\text{ m/s}^2) = 588\\\\,\\\\text{N}\\\\). The person exerts 588 N downward on the table."
-   - WRONG: "Calculate the weight using W = mg"
-   
-2. SHOW ALGEBRAIC STEPS - Don't just state equations, MANIPULATE them:
-   - CORRECT: "Setting up equilibrium conditions: \\\\(\\\\sum F_y = 0\\\\). We have \\\\(N_1 + N_2 + N_3 + N_4 - 588 = 0\\\\). Moving 588 to the right: \\\\(N_1 + N_2 + N_3 + N_4 = 588\\\\,\\\\text{N}\\\\). By symmetry in statics (person at center), all legs support equally: \\\\(N_1 = N_2 = N_3 = N_4 = N\\\\). Substituting: \\\\(N + N + N + N = 588\\\\), which gives \\\\(4N = 588\\\\)."
-   - WRONG: "Set up the equilibrium equation and solve for N"
-
-3. SUBSTITUTE NUMBERS INTO FORMULAS - Show the plugging in:
-   - CORRECT: "Using the kinetic energy formula: \\\\(KE = \\\\frac{1}{2}mv^2\\\\). We have \\\\(m = 5\\\\,\\\\text{kg}\\\\) and \\\\(v = 15\\\\,\\\\text{m/s}\\\\) from earlier. Substituting: \\\\(KE = \\\\frac{1}{2}(5)(15)^2 = \\\\frac{1}{2}(5)(225) = 2.5 \\\\times 225\\\\)."
-   - WRONG: "Use the velocity from the previous step to find kinetic energy"
-
-4. DO THE ARITHMETIC - Show number crunching:
-   - CORRECT: "For the moment calculation: \\\\(M = 2 \\\\times 8 + 5 \\\\times 12 + 2 \\\\times 16 = 16 + 60 + 32 = 108\\\\,\\\\text{kN·m}\\\\)"
-   - WRONG: "Calculate the moment about point A"
-
-5. SIMPLIFY EXPRESSIONS - Show the simplification process:
-   - CORRECT: "Expanding: \\\\(3(x + 2) - 2(x - 1) = 3x + 6 - 2x + 2 = x + 8\\\\)"
-   - WRONG: "Simplify the expression"
-
-YOU MUST SHOW 70-80% OF THE WORK. This means if there are 10 arithmetic steps, YOU DO 7-8 OF THEM.
-
-WHAT YOU MUST DO IN THE "hint" FIELD:
-
-Frame as QUESTIONS using DOMAIN-SPECIFIC TERMS that guide students to FINISH what you started:
-- "We've calculated \\\\(KE = 2.5 \\\\times 225\\\\). Complete this multiplication. What's the kinetic energy in joules?"
-- "We've shown \\\\(4N = 588\\\\). Now divide 588 by 4. Using equilibrium analysis, what is the normal force on each leg in Newtons?"
-- "Using Kirchhoff's voltage law, we found \\\\(V_s - V_{R1} - V_{R2} = 0\\\\). What are the individual voltage drops across \\\\(R_1 = 100\\\\,\\\\Omega\\\\) and \\\\(R_2 = 200\\\\,\\\\Omega\\\\)?"
-- "We've applied the work-energy theorem to get \\\\(\\\\frac{1}{2}mv_f^2 = \\\\(\\\\frac{1}{2}mv_i^2 + Fd\\\\). Substitute the values and solve for \\\\(v_f\\\\)."
-
-WHAT YOU MUST PROVIDE IN THE "formula" FIELD:
-
-EVERY step MUST have relevant equations (MANDATORY):
-- "\\\\(F = ma\\\\)\\\\n\\\\(W = mg\\\\)\\\\n\\\\(g = 9.8\\\\,\\\\text{m/s}^2\\\\)"
-- "\\\\[\\\\sum F_x = 0\\\\]\\\\n\\\\[\\\\sum F_y = 0\\\\]"
-- "\\\\(KE = \\\\frac{1}{2}mv^2\\\\)\\\\n\\\\(PE = mgh\\\\)\\\\n\\\\(E_{total} = KE + PE\\\\)"
-- "\\\\(V = IR\\\\)\\\\n\\\\[\\\\sum V_{loop} = 0\\\\]\\\\n\\\\(P = IV\\\\)"
-- NEVER leave empty: formula: ""
-- The formula field must contain equations only, not prose labels like "Equilibrium conditions" or "Ohm's law"
-- Prefer \\\\[ ... \\\\] for standalone equations and \\\\( ... \\\\) for short inline relations
-
-WHAT YOU MUST PROVIDE IN THE "diagram" FIELD:
-
-For physics/engineering/geometry problems, describe what to visualize (DETAILED):
-- "Free body diagram showing: \\\\(60\\\\,\\\\text{kg}\\\\) person as a box, downward weight \\\\(W = 588\\\\,\\\\text{N}\\\\) from center, upward normal forces \\\\(N_1, N_2, N_3, N_4\\\\) from the four table legs contacting the floor. Coordinate system: y-axis vertical upward."
-- "Circuit diagram with \\\\(12\\\\,\\\\text{V}\\\\) voltage source, two resistors \\\\(R_1 = 100\\\\,\\\\Omega\\\\) and \\\\(R_2 = 200\\\\,\\\\Omega\\\\) in series, with current \\\\(I\\\\) flowing clockwise. Label voltage drops across each resistor."
-- "Draw a free body diagram"
+WHAT THE "diagram" FIELD MUST DO:
+- For physics, engineering, and geometry problems, describe only a helpful visual aid.
+- The diagram must support reasoning without giving away the completed solution.
+- Do not include final values, solved expressions, or conclusion text in the diagram.
 `;
 
 export const JSON_FORMAT_EXAMPLE = `
 {
-  "solution": "Brief description of overall solution approach",
-  "strategy": "Overall strategy for solving this problem",
-  "extractedQuestion": "The complete problem statement (if from image, include ALL details extracted)",
+  "solution": "Brief overview of the partial solving approach",
+  "strategy": "How the student should think through the problem",
+  "extractedQuestion": "The full problem statement, including any image details that were extracted",
   "steps": [
     {
       "stepNumber": 1,
       "title": "Step title using domain-specific terminology",
-      "description": "MUST show 70% of calculations with actual numbers, not just instructions. Use domain-specific terms.",
-      "hint": "Question-based hint asking student to complete the final 30%. Use domain-specific vocabulary.",
-      "formula": "MANDATORY - relevant equations in LaTeX format",
-      "diagram": "For technical problems: detailed description of diagram to visualize (free body diagram, circuit, etc.)"
+      "description": "A partial setup or partial calculation in proper LaTeX that advances the problem without finishing it.",
+      "hint": "A question asking for the next meaningful move, without revealing the final answer.",
+      "formula": "Relevant equations in LaTeX format",
+      "diagram": "Optional visual guidance for technical problems"
     }
   ]
 }
@@ -123,72 +98,32 @@ Return JSON:
 `;
 
 export const LATEX_NOTATION_REQUIREMENTS = `
-MANDATORY LaTeX NOTATION RULES - USE PROPER SYMBOLS, NOT TEXT:
+MANDATORY LaTeX NOTATION RULES:
 
-⚠️ CRITICAL ERROR TO AVOID: NEVER WRITE "sum" OR "Sum" AS TEXT ⚠️
+1. Wrap mathematical expressions with delimiters.
+   - Inline: \\\\(x = 5\\\\)
+   - Display: \\\\[\\\\sum F_y = 0\\\\]
 
-EXAMPLES OF WRONG (NEVER DO THIS):
-❌ "sumF_y = 0"
-❌ "sumM_A = 0"  
-❌ "sum of forces"
-❌ "Sum F = 0"
+2. Use proper LaTeX commands for symbols.
+   - Summation: \\\\sum
+   - Multiplication: \\\\times or \\\\cdot when needed
+   - Fractions: \\\\frac{a}{b}
+   - Roots: \\\\sqrt{x}
+   - Greek letters: \\\\theta, \\\\alpha, \\\\Delta
 
-EXAMPLES OF CORRECT (ALWAYS DO THIS):
-✅ "\\\\sum F_y = 0"
-✅ "\\\\sum M_A = 0"
-✅ "\\\\sum_{i=1}^{n} F_i"
-✅ "\\\\sum F = 0"
-
-CRITICAL: ALWAYS use LaTeX commands for mathematical symbols:
-
-1. SUMMATION: \\\\sum (NEVER "sum" or "Sum")
-   - Correct: \\\\(\\\\sum_{i=1}^{n} F_i\\\\)
-   - Correct: \\\\(\\\\sum M_A = 0\\\\)
-   - Correct: \\\\(\\\\sum F_y = 0\\\\)
-   - WRONG: \\\\(sumF_y = 0\\\\)
-   - WRONG: \\\\(Sum M = 0\\\\)
-
-2. MULTIPLICATION: \\\\times or \\\\cdot (NEVER "x" or "times")
-   - Correct: \\\\(F = m \\\\times a\\\\)
-   - Correct: \\\\(2 \\\\times 8\\\\)
-   - WRONG: \\\\(F = m times a\\\\)
-   - WRONG: \\\\(2 times 8\\\\)
-
-3. PRODUCT: \\\\prod (NEVER "product")
-   - Correct: \\\\(\\\\prod_{i=1}^{n} x_i\\\\)
-
-4. INTEGRAL: \\\\int (NEVER "integral")
-   - Correct: \\\\(\\\\int_a^b f(x)\\\\,dx\\\\)
-
-5. LIMIT: \\\\lim (NEVER "limit")
-   - Correct: \\\\(\\\\lim_{x \\\\to 0} f(x)\\\\)
-
-6. GREEK LETTERS: \\\\alpha, \\\\beta, \\\\theta, \\\\Delta, etc.
-   - Correct: \\\\(\\\\theta = 45^\\\\circ\\\\)
-   - WRONG: \\\\(theta = 45\\\\)
-
-7. FRACTIONS: \\\\frac{a}{b}
-   - Correct: \\\\(\\\\frac{1}{2}mv^2\\\\)
-
-8. SQUARE ROOT: \\\\sqrt{x}
-   - Correct: \\\\(\\\\sqrt{2}\\\\)
-
-9. DELIMITERS: wrap every mathematical expression
-   - Correct inline: \\\\(x = 5\\\\)
-   - Correct display: \\\\[\\\\sum F_y = 0\\\\]
-   - WRONG: "x = 5" or "\\\\sum F_y = 0" without delimiters
-
-REMEMBER: In mathematics, "sum" must ALWAYS be the sigma symbol (∑), written as \\\\sum in LaTeX!
+3. Keep notation professional.
+   - Use \\\\(F_x\\\\), \\\\(v_0\\\\), \\\\(R_A\\\\), \\\\(x^2\\\\)
+   - Do not write plain-text math like "sumFx", "theta", or "sqrt(x)"
 `;
 
 export const CALCULATION_ENFORCEMENT_MESSAGE = `
 CRITICAL ENFORCEMENT:
-Every step's "description" field MUST contain:
-1. Actual numerical calculations (not instructions to calculate)
-2. Substituted values in formulas
-3. Intermediate arithmetic steps
-4. Domain-specific terminology
+Every step's "description" field must contain:
+1. Real setup, substitution, or calculation
+2. Proper LaTeX notation
+3. Domain-appropriate terminology
+4. Only a partial solution, not a finished answer
 
 BAD: "Calculate the weight using W = mg"
-GOOD: "Let's calculate weight using statics principles: \\\\(W = mg = (60 \\\\text{ kg})(9.8 \\\\text{ m/s}^2) = 588\\\\,\\\\text{N}\\\\). The person exerts 588 N downward on the table."
+GOOD: "Using \\\\(W = mg\\\\), we get \\\\(W = (60\\\\,\\\\text{kg})(9.8\\\\,\\\\text{m/s}^2) = 588\\\\,\\\\text{N}\\\\). From equilibrium, \\\\(N_1 + N_2 + N_3 + N_4 = 588\\\\,\\\\text{N}\\\\)."
 `;
