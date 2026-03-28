@@ -46,6 +46,7 @@ import { validateInviteCode } from '../services/inviteService';
 import { getSharedQuestion } from '../services/sharedQuestionService';
 import { getSessionId } from '../services/sessionService';
 import { checkSession, signOut, User } from '../services/authService';
+import type { CoLearnerConnection } from '../services/colearnerConnectionService';
 import { projectId, publicAnonKey } from '../../utils/supabase/info';
 
 const PENDING_INVITE_CODE_KEY = 'pending_invite_code';
@@ -229,6 +230,7 @@ export default function App() {
     transferRuleAnswer: '',
   });
   const [isPreparingGuidedSolution, setIsPreparingGuidedSolution] = useState(false);
+  const [selectedCoLearner, setSelectedCoLearner] = useState<CoLearnerConnection | null>(null);
   const [config, setConfig] = useState<DesignConfig>({
     heading: '',
     placeholder: 'Type your question or paste your problem here...',
@@ -1104,6 +1106,12 @@ export default function App() {
                   onBack={navigateBack}
                   onHomeClick={() => setCurrentScreen('home')}
                   onArchiveClick={() => navigateToScreen('archive')}
+                  isAuthenticated={isAuthenticated}
+                  currentUserName={currentUser?.name || currentUser?.email?.split('@')[0] || 'You'}
+                  onOpenCoLearner={(connection) => {
+                    setSelectedCoLearner(connection);
+                    navigateToScreen('colearn');
+                  }}
                 />
                 <HomeIndicator />
               </>
@@ -1117,7 +1125,8 @@ export default function App() {
                   onInviteClick={() => navigateToScreen('invite')}
                   problemContext={userQuestion}
                   activityLogId={currentActivityLogId || undefined}
-                  currentUserName="You"
+                  currentUserName={currentUser?.name || currentUser?.email?.split('@')[0] || 'You'}
+                  selectedCoLearner={selectedCoLearner}
                 />
                 <HomeIndicator />
               </>
