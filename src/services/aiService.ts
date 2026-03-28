@@ -177,22 +177,22 @@ function generatePartialSolution(question: string): {
       const { a, b, c } = parsed;
       const rhsAfterConstant = c - b;
       return {
-        solution: `To solve this linear equation, isolate \(x\) using inverse operations while keeping both sides balanced.`,
-        strategy: `First remove the constant term, then divide by the coefficient of \(x\). I will complete the setup and leave the last simple arithmetic step for the student.`,
+        solution: `To solve this linear equation, isolate \\(x\\) using inverse operations while keeping both sides balanced.`,
+        strategy: `First remove the constant term, then divide by the coefficient of \\(x\\). I will complete the setup and leave the last simple arithmetic step for the student.`,
         steps: [
           {
             title: "Write the equation in working form",
-            description: `Start with \(${a}x ${b >= 0 ? '+' : '-'} ${Math.abs(b)} = ${c}\). We want the \(x\)-term by itself, so the first move is to undo ${b >= 0 ? `\(+${b}\)` : `\(-${Math.abs(b)}\)`}.`,
+            description: `Start with \\(${a}x ${b >= 0 ? '+' : '-'} ${Math.abs(b)} = ${c}\\). We want the \\(x\\)-term by itself, so the first move is to undo ${b >= 0 ? `\\(+${b}\\)` : `\\(-${Math.abs(b)}\\)`}.`,
             formula: `\\(${a}x ${b >= 0 ? '+' : '-'} ${Math.abs(b)} = ${c}\\)`
           },
           {
             title: "Remove the constant term",
-            description: `Subtract ${b} from both sides: \(${a}x ${b >= 0 ? '+' : '-'} ${Math.abs(b)} ${b >= 0 ? '-' : '+'} ${Math.abs(b)} = ${c} ${b >= 0 ? '-' : '+'} ${Math.abs(b)}\), so \(${a}x = ${rhsAfterConstant}\).`,
+            description: `Subtract ${b} from both sides: \\(${a}x ${b >= 0 ? '+' : '-'} ${Math.abs(b)} ${b >= 0 ? '-' : '+'} ${Math.abs(b)} = ${c} ${b >= 0 ? '-' : '+'} ${Math.abs(b)}\\), so \\(${a}x = ${rhsAfterConstant}\\).`,
             formula: `\\(${a}x = ${rhsAfterConstant}\\)`
           },
           {
             title: "Isolate the variable",
-            description: `Now divide both sides by the coefficient of \(x\): \(x = \\frac{${rhsAfterConstant}}{${a}}\).`,
+            description: `Now divide both sides by the coefficient of \\(x\\): \\(x = \\frac{${rhsAfterConstant}}{${a}}\\).`,
             formula: `\\(x = \\frac{${rhsAfterConstant}}{${a}}\\)`
           },
           {
@@ -267,22 +267,22 @@ function generatePartialSolution(question: string): {
     const radius = extractFirstNumberAfterKeyword(question, 'radius');
     const radiusSquared = radius !== null ? radius * radius : null;
     return {
-      solution: `To find the area of a circle, use \(A = \pi r^2\).`,
-      strategy: `Square the radius first, substitute it into the formula, and leave the final multiplication by \(\pi\) to the student.`,
+      solution: `To find the area of a circle, use \\(A = \\pi r^2\\).`,
+      strategy: `Square the radius first, substitute it into the formula, and leave the final multiplication by \\(\\pi\\) to the student.`,
       steps: [
         {
           title: "Identify the radius",
-          description: radius !== null ? `The given radius is \(r = ${radius}\).` : `Identify the radius from the problem statement before substituting into the area formula.`,
+          description: radius !== null ? `The given radius is \\(r = ${radius}\\).` : `Identify the radius from the problem statement before substituting into the area formula.`,
           formula: "\\(A = \\pi r^2\\)"
         },
         {
           title: "Substitute into the formula",
-          description: radius !== null ? `Substitute \(r = ${radius}\) into \(A = \\pi r^2\): \(A = \\pi(${radius})^2\).` : `Write the formula with the specific radius value substituted in.`,
+          description: radius !== null ? `Substitute \\(r = ${radius}\\) into \\(A = \\pi r^2\\): \\(A = \\pi(${radius})^2\\).` : `Write the formula with the specific radius value substituted in.`,
           formula: radius !== null ? `\\(A = \\pi(${radius})^2\\)` : "\\(A = \\pi r^2\\)"
         },
         {
           title: "Complete the squaring step",
-          description: radiusSquared !== null ? `Square the radius: \(A = \\pi(${radiusSquared})\).` : `Square the radius value before multiplying by \(\\pi\).`,
+          description: radiusSquared !== null ? `Square the radius: \\(A = \\pi(${radiusSquared})\\).` : `Square the radius value before multiplying by \\(\\pi\\).`,
           formula: radiusSquared !== null ? `\\(A = ${radiusSquared}\\pi\\)` : "\\(A = \\pi r^2\\)",
           hint: radiusSquared !== null ? `Now multiply ${radiusSquared} by \\(\\pi\\) and give the area in square units.` : `What do you get after squaring the radius and multiplying by \\(\\pi\\)?`
         }

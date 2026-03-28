@@ -44,6 +44,9 @@ const INLINE_DELIMITERS = [
   { open: '$', close: '$', displayMode: false },
 ] as const;
 
+const INLINE_MATH_CANDIDATE =
+  /(^|[\s(:;,])([A-Za-z0-9\\][A-Za-z0-9\\^_{}()[\].,+\-*/=<>| ]{1,80}[=<>+\-*/^][A-Za-z0-9\\^_{}()[\].,+\-*/=<>| ]{1,80})(?=$|[\s),;:.!?])/g;
+
 function replaceUnicodeEscapes(value: string): string {
   return value.replace(/\\u([0-9a-fA-F]{4})/g, (_, hex) =>
     String.fromCharCode(Number.parseInt(hex, 16)),
@@ -205,6 +208,21 @@ function looksLikeMathLine(line: string): boolean {
   return containsMathSyntax && longWordCount <= 2 && mostlyMathCharacters && trimmed.length <= 180;
 }
 
+function looksLikeInlineMathSegment(segment: string): boolean {
+  const trimmed = segment.trim();
+  if (!trimmed || trimmed.length > 120) return false;
+
+  const longWordCount = (trimmed.match(/\b[A-Za-z]{4,}\b/g) || []).length;
+  const containsMathSyntax =
+    /\\(frac|sqrt|sum|int|lim|pi|theta|alpha|beta|gamma|delta|lambda|mu|sigma|omega|times|cdot|leq|geq|neq|approx|text|sin|cos|tan)\b/.test(trimmed) ||
+    /[=<>+\-*/^_]/.test(trimmed) ||
+    /[\u2212\u221a\u00b1\u00d7\u00f7\u2264\u2265\u2260\u2248\u2192\u03c0]/.test(trimmed);
+  const hasMathAtoms = /[A-Za-z]/.test(trimmed) || /\d/.test(trimmed);
+  const mostlyMathCharacters = /^[A-Za-z0-9\s=<>+\-*/^_()[\]{}.,:;\\|]+$/.test(trimmed);
+
+  return containsMathSyntax && hasMathAtoms && longWordCount <= 2 && mostlyMathCharacters;
+}
+
 function sanitizeLatexExpression(expression: string): string {
   let sanitized = expression.trim();
 
@@ -257,6 +275,46 @@ function normalizePlainMathExpression(expression: string): string {
     .replace(/->/g, '\\to')
     .replace(/\*/g, '\\cdot ')
     .trim();
+}
+
+function tokenizeImplicitMath(text: string): Token[] {
+  const tokens: Token[] = [];
+  let lastIndex = 0;
+
+  for (const match of text.matchAll(INLINE_MATH_CANDIDATE)) {
+    const fullMatch = match[0];
+    const prefix = match[1] || '';
+    const candidate = match[2];
+    const matchIndex = match.index ?? 0;
+    const candidateStart = matchIndex + prefix.length;
+
+    if (!looksLikeInlineMathSegment(candidate)) {
+      continue;
+    }
+
+    if (candidateStart > lastIndex) {
+      tokens.push({ type: 'text', value: text.slice(lastIndex, candidateStart) });
+    }
+
+    tokens.push({
+      type: 'math',
+      value: normalizePlainMathExpression(candidate),
+      raw: candidate,
+      displayMode: false,
+    });
+
+    lastIndex = candidateStart + candidate.length;
+
+    if (fullMatch.endsWith(prefix) && prefix) {
+      lastIndex = matchIndex + fullMatch.length;
+    }
+  }
+
+  if (lastIndex < text.length) {
+    tokens.push({ type: 'text', value: text.slice(lastIndex) });
+  }
+
+  return tokens.length ? tokens : [{ type: 'text', value: text }];
 }
 
 function buildBlocks(rawContent: string): Block[] {
@@ -346,7 +404,9 @@ function appendInlineContent(container: HTMLElement, text: string) {
   const lines = text.split('\n');
 
   lines.forEach((line, lineIndex) => {
-    const tokens = tokenizeExplicitMath(line);
+    const tokens = tokenizeExplicitMath(line).flatMap((token) =>
+      token.type === 'text' ? tokenizeImplicitMath(token.value) : [token],
+    );
 
     tokens.forEach((token) => {
       if (token.type === 'text') {
