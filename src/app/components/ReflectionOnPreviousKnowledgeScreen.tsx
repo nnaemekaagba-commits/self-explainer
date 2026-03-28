@@ -91,7 +91,7 @@ export function ReflectionOnPreviousKnowledgeScreen({
                 <Brain size={18} />
               </div>
               <div>
-                <h3 className="text-[15px] font-semibold text-slate-900">Prompt 1</h3>
+                <h3 className="text-[15px] font-semibold text-slate-900">Be reflective</h3>
                 <p className="text-[13px] leading-relaxed text-slate-700 mt-1">{priorKnowledgePrompt}</p>
               </div>
             </div>
@@ -121,7 +121,7 @@ export function ReflectionOnPreviousKnowledgeScreen({
                   <Lightbulb size={18} />
                 </div>
                 <div>
-                  <h3 className="text-[15px] font-semibold text-slate-900">Prompt 2</h3>
+                  <h3 className="text-[15px] font-semibold text-slate-900">Be Inventive</h3>
                   <p className="text-[13px] leading-relaxed text-slate-700 mt-1">{transferPrompt}</p>
                 </div>
               </div>
