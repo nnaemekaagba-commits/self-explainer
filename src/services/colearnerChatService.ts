@@ -10,6 +10,29 @@ function getCurrentSessionId(): string {
   return getSessionId(authState.user?.id);
 }
 
+function isGuestMode(): boolean {
+  return !getAuthState().user?.id;
+}
+
+async function fetchChatSessions(includeSessionId: boolean): Promise<CoLearnerChatSession[]> {
+  const headers: Record<string, string> = {
+    'Authorization': `Bearer ${publicAnonKey}`,
+  };
+
+  if (includeSessionId) {
+    headers['X-Session-Id'] = getCurrentSessionId();
+  }
+
+  const response = await fetch(`${API_BASE_URL}/colearner-chats`, { headers });
+
+  if (!response.ok) {
+    throw new Error('Failed to fetch chat sessions');
+  }
+
+  const data = await response.json();
+  return data.chats || [];
+}
+
 export interface CoLearnerMessage {
   id: string;
   sender: string;
@@ -70,19 +93,11 @@ export async function createChatSession(
 
 // Get all co-learner chat sessions
 export async function getAllChatSessions(): Promise<CoLearnerChatSession[]> {
-  const response = await fetch(`${API_BASE_URL}/colearner-chats`, {
-    headers: {
-      'Authorization': `Bearer ${publicAnonKey}`,
-      'X-Session-Id': getCurrentSessionId()
-    }
-  });
-
-  if (!response.ok) {
-    throw new Error('Failed to fetch chat sessions');
+  const chats = await fetchChatSessions(true);
+  if (chats.length === 0 && isGuestMode()) {
+    return fetchChatSessions(false);
   }
-
-  const data = await response.json();
-  return data.chats;
+  return chats;
 }
 
 // Alias for consistency

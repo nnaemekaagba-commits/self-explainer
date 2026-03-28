@@ -10,6 +10,29 @@ function getCurrentSessionId(): string {
   return getSessionId(authState.user?.id);
 }
 
+function isGuestMode(): boolean {
+  return !getAuthState().user?.id;
+}
+
+async function fetchActivities(includeSessionId: boolean): Promise<Activity[]> {
+  const headers: Record<string, string> = {
+    'Authorization': `Bearer ${publicAnonKey}`,
+  };
+
+  if (includeSessionId) {
+    headers['X-Session-Id'] = getCurrentSessionId();
+  }
+
+  const response = await fetch(`${API_BASE_URL}/activities`, { headers });
+
+  if (!response.ok) {
+    throw new Error('Failed to fetch activities');
+  }
+
+  const data = await response.json();
+  return data.activities || [];
+}
+
 export interface Activity {
   id: string;
   question: string;
@@ -23,19 +46,11 @@ export interface Activity {
 // Get all archived activities
 export async function getActivities(): Promise<Activity[]> {
   try {
-    const response = await fetch(`${API_BASE_URL}/activities`, {
-      headers: {
-        'Authorization': `Bearer ${publicAnonKey}`,
-        'X-Session-Id': getCurrentSessionId()
-      }
-    });
-
-    if (!response.ok) {
-      throw new Error('Failed to fetch activities');
+    const activities = await fetchActivities(true);
+    if (activities.length === 0 && isGuestMode()) {
+      return await fetchActivities(false);
     }
-
-    const data = await response.json();
-    return data.activities || [];
+    return activities;
   } catch (error) {
     console.error('Error fetching activities:', error);
     // Return empty array if backend fails

@@ -16,6 +16,29 @@ function getCurrentSessionId(): string {
   return sessionId;
 }
 
+function isGuestMode(): boolean {
+  return !getAuthState().user?.id;
+}
+
+async function fetchActivityLogs(includeSessionId: boolean): Promise<ActivityLog[]> {
+  const headers: Record<string, string> = {
+    'Authorization': `Bearer ${publicAnonKey}`,
+  };
+
+  if (includeSessionId) {
+    headers['X-Session-Id'] = getCurrentSessionId();
+  }
+
+  const response = await fetch(`${API_BASE_URL}/activity-logs`, { headers });
+
+  if (!response.ok) {
+    throw new Error('Failed to fetch activity logs');
+  }
+
+  const data = await response.json();
+  return data.logs || [];
+}
+
 export interface ChatMessage {
   role: 'user' | 'ai';
   content: string;
@@ -261,19 +284,11 @@ export async function updateLastAttemptChatMessages(
 // Get all activity logs
 export async function getAllActivityLogs(): Promise<ActivityLog[]> {
   try {
-    const response = await fetch(`${API_BASE_URL}/activity-logs`, {
-      headers: {
-        'Authorization': `Bearer ${publicAnonKey}`,
-        'X-Session-Id': getCurrentSessionId()
-      }
-    });
-
-    if (!response.ok) {
-      throw new Error('Failed to fetch activity logs');
+    const logs = await fetchActivityLogs(true);
+    if (logs.length === 0 && isGuestMode()) {
+      return await fetchActivityLogs(false);
     }
-
-    const data = await response.json();
-    return data.logs || [];
+    return logs;
   } catch (error) {
     console.error('Error fetching activity logs:', error);
     return [];
