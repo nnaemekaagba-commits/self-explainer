@@ -13,6 +13,7 @@ import { HomeScreen } from './components/HomeScreen';
 import { ScaffoldedSolutionScreen } from './components/ScaffoldedSolutionScreen';
 import { ScaffoldedSolutionScreenActive } from './components/ScaffoldedSolutionScreenActive';
 import { InteractiveGuidedSolution } from './components/InteractiveGuidedSolution';
+import { ReflectionOnPreviousKnowledgeScreen } from './components/ReflectionOnPreviousKnowledgeScreen';
 import { ArchiveScreen } from './components/ArchiveScreen';
 import { InviteFriendScreen } from './components/InviteFriendScreen';
 import { CoLearnScreen } from './components/CoLearnScreen';
@@ -69,14 +70,53 @@ interface DesignConfig {
 
 type TutorSubject = 'linear-algebra' | 'trigonometry' | 'geometry';
 
-function buildSubjectScopedPrompt(subject: TutorSubject, question: string): string {
+function buildSubjectScopedPrompt(
+  subject: TutorSubject,
+  question: string,
+  reflection?: {
+    priorKnowledgeAnswer: string;
+    transferRuleAnswer: string;
+  }
+): string {
   const subjectInstructions: Record<TutorSubject, string> = {
     'linear-algebra': 'Teach this as linear algebra with emphasis on structure, strategy choice, and problem-solving habits. Highlight why each step works, common mistakes with matrices/vectors/systems, and how to check the result.',
     'trigonometry': 'Teach this as trigonometry with emphasis on identities, angle reasoning, unit-circle thinking, and method selection. Highlight common sign/quadrant mistakes and how to verify the result.',
     'geometry': 'Teach this as geometry with emphasis on diagrams, theorem/property justification, and proof-style reasoning. Highlight why each fact follows and how to check whether the relationships are consistent.',
   };
 
-  return `[Subject: ${subject}] ${subjectInstructions[subject]}\n\nProblem:\n${question}`;
+  const reflectionSection = reflection
+    ? `\n\n[Student Reflection]
+Prior knowledge response:
+${reflection.priorKnowledgeAnswer}
+
+Rule-building response:
+${reflection.transferRuleAnswer}
+
+[Adaptation Instructions]
+Adapt the guided solution to the student's current knowledge level. Use smaller partial steps and gentler prompts if the student sounds uncertain. If the student shows stronger prior knowledge, keep the steps focused but still partial. Never jump to the final answer.`
+    : '';
+
+  return `[Subject: ${subject}] ${subjectInstructions[subject]}\n\nProblem:\n${question}${reflectionSection}`;
+}
+
+function buildReflectionPrompts(subject: TutorSubject, question: string) {
+  const trimmedQuestion = question.trim() || 'this problem';
+  const prompts: Record<TutorSubject, { prior: string; transfer: string }> = {
+    'linear-algebra': {
+      prior: `Before we solve ${trimmedQuestion}, what ideas from systems, vectors, matrices, or transformations already seem relevant to you, and which part still feels uncertain?`,
+      transfer: `Imagine the same linear-algebra problem became harder than what you already know. What rule, checklist, or decision process would you invent to decide what to do first, second, and third?`,
+    },
+    'trigonometry': {
+      prior: `Before we solve ${trimmedQuestion}, what trig ideas already come to mind, such as identities, angle relationships, graph behavior, or unit-circle facts, and where do you feel less confident?`,
+      transfer: `Suppose the trigonometry problem changed into a harder one that goes beyond your current comfort level. What general rule or strategy would you invent to decide which trig relationship to test first?`,
+    },
+    'geometry': {
+      prior: `Before we solve ${trimmedQuestion}, what geometric facts, diagram relationships, or theorems do you already notice, and which part of the figure still feels unclear?`,
+      transfer: `If the geometry problem became more advanced than what you currently know, what rule or strategy would you invent to organize the diagram, choose a theorem, and decide what to prove or compute next?`,
+    },
+  };
+
+  return prompts[subject];
 }
 
 export default function App() {
@@ -88,8 +128,8 @@ export default function App() {
   
   const [mode, setMode] = useState<'overview' | 'prototype'>('prototype');
   const [fidelity, setFidelity] = useState<'high' | 'low'>('high');
-  const [currentScreen, setCurrentScreen] = useState<'login' | 'signup' | 'forgot-password' | 'reset-password' | 'home' | 'scaffolded' | 'scaffolded-active' | 'archive' | 'guided' | 'invite' | 'colearn' | 'feedback-correct' | 'feedback-wrong' | 'feedback-both-wrong' | 'feedback-partial' | 'profile' | 'self-explanation' | 'student-work' | 'practice' | 'shared-exercise'>('login');
-  const [screenHistory, setScreenHistory] = useState<Array<'login' | 'signup' | 'forgot-password' | 'reset-password' | 'home' | 'scaffolded' | 'scaffolded-active' | 'archive' | 'guided' | 'invite' | 'colearn' | 'feedback-correct' | 'feedback-wrong' | 'feedback-both-wrong' | 'feedback-partial' | 'profile' | 'self-explanation' | 'student-work' | 'practice' | 'shared-exercise'>>(['login']);
+  const [currentScreen, setCurrentScreen] = useState<'login' | 'signup' | 'forgot-password' | 'reset-password' | 'home' | 'scaffolded' | 'scaffolded-active' | 'reflection' | 'archive' | 'guided' | 'invite' | 'colearn' | 'feedback-correct' | 'feedback-wrong' | 'feedback-both-wrong' | 'feedback-partial' | 'profile' | 'self-explanation' | 'student-work' | 'practice' | 'shared-exercise'>('login');
+  const [screenHistory, setScreenHistory] = useState<Array<'login' | 'signup' | 'forgot-password' | 'reset-password' | 'home' | 'scaffolded' | 'scaffolded-active' | 'reflection' | 'archive' | 'guided' | 'invite' | 'colearn' | 'feedback-correct' | 'feedback-wrong' | 'feedback-both-wrong' | 'feedback-partial' | 'profile' | 'self-explanation' | 'student-work' | 'practice' | 'shared-exercise'>>(['login']);
   const [selectedSubject, setSelectedSubject] = useState<TutorSubject>('linear-algebra');
   const [aiData, setAiData] = useState<any>(null);
   const [userQuestion, setUserQuestion] = useState<string>('');
@@ -114,6 +154,11 @@ export default function App() {
   // Loading state for solution generation
   const [isGeneratingSolution, setIsGeneratingSolution] = useState(false);
   const [sharePrefillToken, setSharePrefillToken] = useState<string | null>(null);
+  const [reflectionResponses, setReflectionResponses] = useState({
+    priorKnowledgeAnswer: '',
+    transferRuleAnswer: '',
+  });
+  const [isPreparingGuidedSolution, setIsPreparingGuidedSolution] = useState(false);
   const [config, setConfig] = useState<DesignConfig>({
     heading: '',
     placeholder: 'Type your question or paste your problem here...',
@@ -532,6 +577,7 @@ export default function App() {
         'openai'
       );
       setAiData(aiResponse);
+      setReflectionResponses({ priorKnowledgeAnswer: '', transferRuleAnswer: '' });
       console.log('Solution regenerated successfully');
     } catch (error) {
       console.error('Failed to regenerate solution:', error);
@@ -543,9 +589,8 @@ export default function App() {
     }
   };
 
-  // Save activity to archive when user starts learning
-  const handleStartLearning = async () => {
-    if (userQuestion && aiData) {
+  const saveActivityAndStartGuided = async (questionForActivity: string, aiDataForActivity: any) => {
+    if (questionForActivity && aiDataForActivity) {
       try {
         // Save to activities
         const activityId = await fetch(`https://${projectId}.supabase.co/functions/v1/make-server-9063c65e/activities`, {
@@ -556,11 +601,11 @@ export default function App() {
             'X-Session-Id': getSessionId(currentUser?.id)
           },
           body: JSON.stringify({
-            question: userQuestion,
+            question: questionForActivity,
             status: 'In Progress',
-            aiData: aiData,
+            aiData: aiDataForActivity,
             completedSteps: 0,
-            totalSteps: aiData?.steps?.length || 0
+            totalSteps: aiDataForActivity?.steps?.length || 0
           })
         }).then(res => res.json()).then(data => data.id);
         setCurrentActivityId(activityId);
@@ -569,19 +614,19 @@ export default function App() {
         // Create activity log for tracking attempts
         console.log('📝 Creating activity log with:', {
           activityId,
-          question: userQuestion,
-          totalSteps: aiData?.steps?.length || 0
+          question: questionForActivity,
+          totalSteps: aiDataForActivity?.steps?.length || 0
         });
         
         // For guided solutions, the log ID itself becomes the learning thread ID
         const logId = await createActivityLog(
           activityId,
-          userQuestion,
-          aiData?.steps?.length || 0
+          questionForActivity,
+          aiDataForActivity?.steps?.length || 0
         );
         
         setCurrentActivityLogId(logId);
-        setCurrentLearningThreadId(logId); // This guided solution starts a new learning thread
+        setCurrentLearningThreadId(logId);
         console.log('✅ Activity log created successfully!');
         console.log('   Log ID:', logId);
         console.log('   State will be updated to:', logId);
@@ -600,7 +645,31 @@ export default function App() {
         console.error('   Stack:', error.stack);
       }
     }
-    setCurrentScreen('guided');
+    navigateToScreen('guided');
+  };
+
+  const handleStartLearning = async () => {
+    navigateToScreen('reflection');
+  };
+
+  const handleReflectionSubmit = async (priorKnowledgeAnswer: string, transferRuleAnswer: string) => {
+    const effectiveQuestion = aiData?.extractedQuestion || userQuestion;
+    const nextResponses = { priorKnowledgeAnswer, transferRuleAnswer };
+
+    setReflectionResponses(nextResponses);
+    setIsPreparingGuidedSolution(true);
+
+    try {
+      const adaptivePrompt = buildSubjectScopedPrompt(selectedSubject, effectiveQuestion, nextResponses);
+      const adaptedAiData = await solveProblem(adaptivePrompt, uploadedImageUrl || undefined, 'openai');
+      setAiData(adaptedAiData);
+      await saveActivityAndStartGuided(effectiveQuestion, adaptedAiData);
+    } catch (error) {
+      console.error('Failed to generate adapted guided solution:', error);
+      await saveActivityAndStartGuided(effectiveQuestion, aiData);
+    } finally {
+      setIsPreparingGuidedSolution(false);
+    }
   };
 
   // Navigation helper function with history tracking
@@ -720,6 +789,7 @@ export default function App() {
                   // Reset step progress when generating new solution
                   setCurrentStepIndex(0);
                   setCompletedSteps(new Set());
+                  setReflectionResponses({ priorKnowledgeAnswer: '', transferRuleAnswer: '' });
                   
                   // Call AI service to get problem-specific solution
                   try {
@@ -792,6 +862,24 @@ export default function App() {
                   onStartLearning={handleStartLearning}
                   aiData={aiData}
                   userQuestion={userQuestion}
+                />
+                <HomeIndicator />
+              </>
+            ) : currentScreen === 'reflection' ? (
+              <>
+                <StatusBar />
+                <ReflectionOnPreviousKnowledgeScreen
+                  onBack={navigateBack}
+                  onHomeClick={() => setCurrentScreen('home')}
+                  onArchiveClick={() => navigateToScreen('archive')}
+                  onInviteClick={() => navigateToScreen('invite')}
+                  question={aiData?.extractedQuestion || userQuestion}
+                  priorKnowledgePrompt={buildReflectionPrompts(selectedSubject, aiData?.extractedQuestion || userQuestion).prior}
+                  transferPrompt={buildReflectionPrompts(selectedSubject, aiData?.extractedQuestion || userQuestion).transfer}
+                  initialPriorKnowledgeAnswer={reflectionResponses.priorKnowledgeAnswer}
+                  initialTransferAnswer={reflectionResponses.transferRuleAnswer}
+                  onSubmit={handleReflectionSubmit}
+                  isSubmitting={isPreparingGuidedSolution}
                 />
                 <HomeIndicator />
               </>

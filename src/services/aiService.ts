@@ -42,10 +42,12 @@ function parseSubjectScopedPrompt(question: string): { subject: TutorSubject | n
   }
 
   const subject = match[1].toLowerCase() as TutorSubject;
-  const remainder = match[2].replace(/^Problem:\s*/i, '').trim();
+  const remainder = match[2].trim();
+  const problemMatch = remainder.match(/Problem:\s*([\s\S]*?)(?:\n\s*\[Student Reflection\]|\n\s*\[Adaptation Instructions\]|$)/i);
+  const cleanQuestion = (problemMatch ? problemMatch[1] : remainder.replace(/^Problem:\s*/i, '')).trim();
   return {
     subject,
-    cleanQuestion: remainder || question,
+    cleanQuestion: cleanQuestion || question,
   };
 }
 
