@@ -101,22 +101,92 @@ Adapt the guided solution to the student's current knowledge level. Use smaller 
 
 function buildReflectionPrompts(subject: TutorSubject, question: string) {
   const trimmedQuestion = question.trim() || 'this problem';
-  const prompts: Record<TutorSubject, { prior: string; transfer: string }> = {
-    'linear-algebra': {
-      prior: `Before we solve ${trimmedQuestion}, what ideas from systems, vectors, matrices, or transformations already seem relevant to you, and which part still feels uncertain?`,
-      transfer: `Imagine the same linear-algebra problem became harder than what you already know. What rule, checklist, or decision process would you invent to decide what to do first, second, and third?`,
-    },
-    'trigonometry': {
-      prior: `Before we solve ${trimmedQuestion}, what trig ideas already come to mind, such as identities, angle relationships, graph behavior, or unit-circle facts, and where do you feel less confident?`,
-      transfer: `Suppose the trigonometry problem changed into a harder one that goes beyond your current comfort level. What general rule or strategy would you invent to decide which trig relationship to test first?`,
-    },
-    'geometry': {
-      prior: `Before we solve ${trimmedQuestion}, what geometric facts, diagram relationships, or theorems do you already notice, and which part of the figure still feels unclear?`,
-      transfer: `If the geometry problem became more advanced than what you currently know, what rule or strategy would you invent to organize the diagram, choose a theorem, and decide what to prove or compute next?`,
-    },
+  const normalized = trimmedQuestion.toLowerCase();
+
+  const priorPrompts: Record<TutorSubject, string> = {
+    'linear-algebra': `Before we solve ${trimmedQuestion}, what ideas from systems, vectors, matrices, or transformations already seem relevant to you, and which part still feels uncertain?`,
+    'trigonometry': `Before we solve ${trimmedQuestion}, what trig ideas already come to mind, such as identities, angle relationships, graph behavior, or unit-circle facts, and where do you feel less confident?`,
+    'geometry': `Before we solve ${trimmedQuestion}, what geometric facts, diagram relationships, or theorems do you already notice, and which part of the figure still feels unclear?`,
   };
 
-  return prompts[subject];
+  if (/\bgraph|plot|sketch\b/.test(normalized)) {
+    return {
+      prior: priorPrompts[subject],
+      transfer: `Now try a harder transfer task based on this graph idea: imagine I show you a graph with turning points, intercepts, or asymptotes but do not give you its equation. What rule would you use to work backward from the visible graph features and derive a possible equation?`,
+    };
+  }
+
+  if (subject === 'linear-algebra' && /\bmatrix|matrices|determinant|inverse\b/.test(normalized)) {
+    return {
+      prior: priorPrompts[subject],
+      transfer: `Suppose I give you a new matrix problem where the matrix has one changed entry and I ask whether the determinant, inverse, or solution behavior changes. What rule would you use to decide which matrix property to check first, and why?`,
+    };
+  }
+
+  if (subject === 'linear-algebra' && /\bvector|span|basis|subspace|linear combination\b/.test(normalized)) {
+    return {
+      prior: priorPrompts[subject],
+      transfer: `Imagine I give you a new vector that might or might not belong to the span of the original set. What rule would you use to test span, dependence, or basis status before doing all the calculations?`,
+    };
+  }
+
+  if (subject === 'linear-algebra' && /\bsystem|simultaneous|elimination|solve for\b/.test(normalized)) {
+    return {
+      prior: priorPrompts[subject],
+      transfer: `Suppose the system became larger or slightly inconsistent. What rule would you use to decide whether to use substitution, elimination, or row reduction first, and what clues would guide that choice?`,
+    };
+  }
+
+  if (subject === 'trigonometry' && /\bgraph|sin|cos|tan|amplitude|period|phase shift\b/.test(normalized)) {
+    return {
+      prior: priorPrompts[subject],
+      transfer: `Imagine I draw a transformed sine or cosine graph and ask you to derive its equation from the graph alone. What rule would you use to identify the midline, amplitude, period, and shift in the correct order?`,
+    };
+  }
+
+  if (subject === 'trigonometry' && /\bidentity|prove\b/.test(normalized)) {
+    return {
+      prior: priorPrompts[subject],
+      transfer: `Suppose I give you a harder trig identity that does not simplify right away. What rule would you use to decide whether to rewrite everything in sine and cosine, factor first, or separate the two sides?`,
+    };
+  }
+
+  if (subject === 'trigonometry' && /\bunit circle|angle|radian|degree|quadrant\b/.test(normalized)) {
+    return {
+      prior: priorPrompts[subject],
+      transfer: `Imagine I ask for an exact trig value at an unfamiliar angle or in a harder quadrant setting. What rule would you use to connect the angle to the unit circle, reference angles, and sign before calculating anything?`,
+    };
+  }
+
+  if (subject === 'geometry' && /\btriangle|congruent|similar|proof\b/.test(normalized)) {
+    return {
+      prior: priorPrompts[subject],
+      transfer: `Suppose I give you a harder geometry proof with one extra construction line added. What rule would you use to decide which triangle relationships or theorems to test first before writing the proof?`,
+    };
+  }
+
+  if (subject === 'geometry' && /\bcircle|chord|tangent|arc|angle\b/.test(normalized)) {
+    return {
+      prior: priorPrompts[subject],
+      transfer: `Imagine I show you a new circle diagram with tangents, chords, and inscribed angles and ask you to derive an unknown relationship. What rule would you use to decide which circle theorem to apply first from the diagram?`,
+    };
+  }
+
+  if (subject === 'geometry' && /\bcoordinate|slope|distance|midpoint\b/.test(normalized)) {
+    return {
+      prior: priorPrompts[subject],
+      transfer: `Suppose the same geometry idea moved onto the coordinate plane and I asked you to derive the equation or relationship from plotted points. What rule would you use to decide between slope, distance, midpoint, or equation methods first?`,
+    };
+  }
+
+  return {
+    prior: priorPrompts[subject],
+    transfer: {
+      'linear-algebra': `Imagine the same linear-algebra problem became harder than what you already know. What concrete rule or checklist would you use to decide what to test first, second, and third?`,
+      'trigonometry': `Suppose the trigonometry problem changed into a harder one that goes beyond your current comfort level. What concrete rule would you use to decide which trig relationship or representation to test first?`,
+      'geometry': `If the geometry problem became more advanced than what you currently know, what concrete rule would you use to organize the figure, choose a theorem, and decide what to prove or compute next?`,
+    }[subject],
+  };
 }
 
 export default function App() {
