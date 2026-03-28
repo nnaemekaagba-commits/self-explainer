@@ -709,6 +709,11 @@ export default function App() {
         // Reset step attempts and AI queries
         setStepAttempts({});
         setCurrentStepAIQueries(0);
+        setCurrentStepChatMessages([]);
+        setSavedStepAnswers({});
+        setSavedStepExplanations({});
+        setCurrentStepIndex(0);
+        setCompletedSteps(new Set());
       } catch (error) {
         console.error('❌ Failed to save activity or create log:', error);
         console.error('   Error details:', error.message);
@@ -720,6 +725,31 @@ export default function App() {
 
   const handleStartLearning = async () => {
     navigateToScreen('reflection');
+  };
+
+  const handleReturnToGuidedPractice = async (practiceQuestion: string) => {
+    if (!practiceQuestion?.trim()) {
+      return;
+    }
+
+    setIsPreparingGuidedSolution(true);
+
+    try {
+      const guidedPracticeData = await solveProblem(
+        buildSubjectScopedPrompt(selectedSubject, practiceQuestion),
+        undefined,
+        'openai'
+      );
+      setUserQuestion(practiceQuestion);
+      setUploadedImageUrl(null);
+      setReflectionResponses({ priorKnowledgeAnswer: '', transferRuleAnswer: '' });
+      setAiData(guidedPracticeData);
+      await saveActivityAndStartGuided(practiceQuestion, guidedPracticeData);
+    } catch (error) {
+      console.error('Failed to regenerate guided support for practice problem:', error);
+    } finally {
+      setIsPreparingGuidedSolution(false);
+    }
   };
 
   const handleReflectionSubmit = async (priorKnowledgeAnswer: string, transferRuleAnswer: string) => {
@@ -1286,6 +1316,7 @@ export default function App() {
                   onHomeClick={() => setCurrentScreen('home')}
                   onArchiveClick={() => navigateToScreen('archive')}
                   onInviteClick={() => navigateToScreen('invite')}
+                  onReturnToGuidedPractice={handleReturnToGuidedPractice}
                   originalQuestion={userQuestion}
                   originalAIData={aiData}
                   learningThreadId={currentLearningThreadId || undefined}

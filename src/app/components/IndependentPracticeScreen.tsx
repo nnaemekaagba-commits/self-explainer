@@ -23,6 +23,7 @@ interface IndependentPracticeScreenProps {
   onHomeClick?: () => void;
   onArchiveClick?: () => void;
   onInviteClick?: () => void;
+  onReturnToGuidedPractice?: (practiceQuestion: string) => Promise<void> | void;
   originalQuestion?: string;
   originalAIData?: any;
   learningThreadId?: string;
@@ -33,13 +34,15 @@ export function IndependentPracticeScreen({
   onHomeClick,
   onArchiveClick,
   onInviteClick,
+  onReturnToGuidedPractice,
   originalQuestion,
   originalAIData,
   learningThreadId,
 }: IndependentPracticeScreenProps) {
+  void learningThreadId;
+  const MAX_PRACTICE_ATTEMPTS = 3;
   const [practiceQuestion, setPracticeQuestion] = useState<PracticeQuestion | null>(null);
   const [isGenerating, setIsGenerating] = useState(true);
-  const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [stepAnswers, setStepAnswers] = useState<Record<number, string>>({});
   const [stepExplanations, setStepExplanations] = useState<Record<number, string>>({});
   const [submittedSteps, setSubmittedSteps] = useState<Set<number>>(new Set());
@@ -47,6 +50,10 @@ export function IndependentPracticeScreen({
   const [isValidating, setIsValidating] = useState(false);
   const [allStepsCompleted, setAllStepsCompleted] = useState(false);
   const [showCelebration, setShowCelebration] = useState(false);
+  const [practiceAttemptCount, setPracticeAttemptCount] = useState(1);
+  const [attemptCompleted, setAttemptCompleted] = useState(false);
+  const [attemptPassed, setAttemptPassed] = useState(false);
+  const [isReturningToGuided, setIsReturningToGuided] = useState(false);
 
   // Generate similar question on mount
   useEffect(() => {
@@ -91,6 +98,16 @@ export function IndependentPracticeScreen({
 
     generateQuestion();
   }, [originalQuestion, originalAIData]);
+
+  const resetForNextAttempt = () => {
+    setStepAnswers({});
+    setStepExplanations({});
+    setSubmittedSteps(new Set());
+    setStepResults({});
+    setAllStepsCompleted(false);
+    setAttemptCompleted(false);
+    setAttemptPassed(false);
+  };
 
   const handleSubmitStep = async (stepNumber: number) => {
     const answer = stepAnswers[stepNumber];
@@ -145,6 +162,9 @@ export function IndependentPracticeScreen({
           if (s.stepNumber === stepNumber) return result.answerCorrect && result.explanationCorrect;
           return stepResults[s.stepNumber]?.answerCorrect && stepResults[s.stepNumber]?.explanationCorrect;
         });
+
+        setAttemptCompleted(true);
+        setAttemptPassed(allCorrect);
 
         if (allCorrect) {
           setAllStepsCompleted(true);
@@ -235,6 +255,22 @@ export function IndependentPracticeScreen({
 
       <div className="flex-1 overflow-y-auto px-6 py-6 pb-8">
         <div className="space-y-5">
+          <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-[13px] font-semibold text-amber-900">
+                  Practice attempt {practiceAttemptCount} of {MAX_PRACTICE_ATTEMPTS}
+                </p>
+                <p className="text-[12px] text-amber-800 mt-1">
+                  If this problem is still not solved after three full tries, we will guide you through this practice problem again.
+                </p>
+              </div>
+              <div className="text-[12px] font-medium text-amber-900">
+                {Math.max(MAX_PRACTICE_ATTEMPTS - practiceAttemptCount, 0)} retries left
+              </div>
+            </div>
+          </div>
+
           {/* Instructions */}
           <div className="bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200 rounded-2xl p-5">
             <h3 className="text-[15px] font-semibold text-purple-900 mb-2 flex items-center gap-2">
@@ -444,6 +480,48 @@ export function IndependentPracticeScreen({
                   </p>
                 </div>
               </div>
+            </div>
+          )}
+
+          {attemptCompleted && !attemptPassed && (
+            <div className="bg-gradient-to-r from-orange-50 to-red-50 border border-orange-300 rounded-2xl p-6 shadow-lg">
+              <h3 className="text-[16px] font-bold text-orange-900 mb-2">
+                Let's try that practice problem again
+              </h3>
+              <p className="text-[14px] text-orange-800 leading-relaxed mb-4">
+                You completed this attempt, but not all steps were correct yet.
+                {practiceAttemptCount < MAX_PRACTICE_ATTEMPTS
+                  ? ` You can retry this same practice problem ${MAX_PRACTICE_ATTEMPTS - practiceAttemptCount} more time${MAX_PRACTICE_ATTEMPTS - practiceAttemptCount === 1 ? '' : 's'}.`
+                  : ' You have used all three tries, so the system can guide you through this practice problem again.'}
+              </p>
+
+              {practiceAttemptCount < MAX_PRACTICE_ATTEMPTS ? (
+                <button
+                  onClick={() => {
+                    setPracticeAttemptCount(prev => prev + 1);
+                    resetForNextAttempt();
+                  }}
+                  className="w-full bg-gradient-to-r from-orange-500 to-red-500 text-white py-3 px-4 rounded-xl font-medium text-[14px] hover:from-orange-600 hover:to-red-600 transition-all shadow-lg"
+                >
+                  Retry This Practice Problem
+                </button>
+              ) : (
+                <button
+                  onClick={async () => {
+                    if (!practiceQuestion?.question || !onReturnToGuidedPractice) return;
+                    setIsReturningToGuided(true);
+                    try {
+                      await onReturnToGuidedPractice(practiceQuestion.question);
+                    } finally {
+                      setIsReturningToGuided(false);
+                    }
+                  }}
+                  disabled={isReturningToGuided || !onReturnToGuidedPractice}
+                  className="w-full bg-gradient-to-r from-purple-600 to-blue-600 text-white py-3 px-4 rounded-xl font-medium text-[14px] hover:from-purple-700 hover:to-blue-700 transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isReturningToGuided ? 'Preparing Guided Help...' : 'Return to Guided Support'}
+                </button>
+              )}
             </div>
           )}
         </div>
