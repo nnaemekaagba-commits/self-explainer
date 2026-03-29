@@ -6,6 +6,7 @@ import { MathRenderer } from './MathRenderer';
 import type { CoLearnerChatSession } from '../../services/colearnerChatService';
 import * as colearnerChatService from '../../services/colearnerChatService';
 import { copyToClipboard } from '../../utils/clipboard';
+import * as XLSX from 'xlsx';
 
 interface ArchiveScreenProps {
   onBack: () => void;
@@ -42,6 +43,87 @@ export const ArchiveScreen = ({ onBack, onHomeClick, onInviteClick, onStudentWor
 
   const getPracticeMisses = (log: ActivityLog) => {
     return Math.max(log.totalAttempts - log.totalCorrectResponses, 0);
+  };
+
+  const exportPracticeToExcel = () => {
+    const rows = practiceLogs.flatMap((log) =>
+      log.steps.flatMap((step) =>
+        step.attempts.map((attempt) => ({
+          Question: log.question,
+          Status: log.status,
+          Progress: `${getPracticeProgress(log)}%`,
+          CorrectCount: log.totalCorrectResponses,
+          MissCount: getPracticeMisses(log),
+          TotalSubmissions: log.totalAttempts,
+          StepNumber: step.stepNumber,
+          StepCompleted: step.completed ? 'Yes' : 'No',
+          AttemptNumber: attempt.attemptNumber,
+          AnswerCorrect: attempt.answerCorrect ? 'Yes' : 'No',
+          ExplanationCorrect: attempt.explanationCorrect ? 'Yes' : 'No',
+          StudentAnswer: attempt.userAnswer,
+          StudentExplanation: attempt.userExplanation,
+          SubmittedAt: attempt.timestamp,
+        }))
+      )
+    );
+
+    const workbook = XLSX.utils.book_new();
+    const worksheet = XLSX.utils.json_to_sheet(rows.length ? rows : [{ Message: 'No practice activity logs available' }]);
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Practice Activity');
+    XLSX.writeFile(workbook, 'practice_activity.xlsx');
+  };
+
+  const exportPracticeToWord = () => {
+    const sections = practiceLogs.map((log) => {
+      const stepBlocks = log.steps.map((step) => {
+        const attempts = step.attempts.map((attempt) => `
+          <div style="margin: 10px 0; padding: 10px; border: 1px solid #e5e7eb; border-radius: 8px;">
+            <p><strong>Attempt ${attempt.attemptNumber}</strong> • Answer correct: ${attempt.answerCorrect ? 'Yes' : 'No'} • Explanation correct: ${attempt.explanationCorrect ? 'Yes' : 'No'}</p>
+            <p><strong>Answer:</strong> ${attempt.userAnswer || '-'}</p>
+            <p><strong>Explanation:</strong> ${attempt.userExplanation || '-'}</p>
+            <p><strong>Submitted:</strong> ${formatDateTime(attempt.timestamp)}</p>
+          </div>
+        `).join('');
+
+        return `
+          <div style="margin: 16px 0;">
+            <h4>Step ${step.stepNumber}</h4>
+            <p><strong>Completed:</strong> ${step.completed ? 'Yes' : 'No'}</p>
+            <p><strong>Attempts:</strong> ${step.attempts.length}</p>
+            ${attempts || '<p>No attempts recorded.</p>'}
+          </div>
+        `;
+      }).join('');
+
+      return `
+        <section style="margin-bottom: 28px; padding-bottom: 20px; border-bottom: 1px solid #d1d5db;">
+          <h2>Practice Problem</h2>
+          <p><strong>Question:</strong> ${log.question}</p>
+          <p><strong>Status:</strong> ${log.status}</p>
+          <p><strong>Progress:</strong> ${getPracticeProgress(log)}%</p>
+          <p><strong>Correct:</strong> ${log.totalCorrectResponses} | <strong>Misses:</strong> ${getPracticeMisses(log)} | <strong>Total submissions:</strong> ${log.totalAttempts}</p>
+          ${stepBlocks}
+        </section>
+      `;
+    }).join('');
+
+    const html = `
+      <html>
+        <head><meta charset="utf-8"><title>Practice Activity Export</title></head>
+        <body style="font-family: Arial, sans-serif; line-height: 1.5; color: #111827;">
+          <h1>Practice Activity Export</h1>
+          ${sections || '<p>No practice activity logs available.</p>'}
+        </body>
+      </html>
+    `;
+
+    const blob = new Blob([html], { type: 'application/msword' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'practice_activity.doc';
+    link.click();
+    URL.revokeObjectURL(url);
   };
 
   const toggleAttempt = (stepNumber: number, attemptNumber: number) => {
@@ -378,6 +460,21 @@ export const ArchiveScreen = ({ onBack, onHomeClick, onInviteClick, onStudentWor
               <p className="text-[11px] text-orange-800">
                 Review how students worked through independent practice, including answers, explanations, misses, correct steps, and overall progress.
               </p>
+            </div>
+
+            <div className="mb-4 grid grid-cols-2 gap-3">
+              <button
+                onClick={exportPracticeToExcel}
+                className="py-3 px-4 bg-green-600 text-white rounded-xl font-semibold text-[13px] shadow-sm hover:bg-green-700 transition-colors"
+              >
+                Export to Excel
+              </button>
+              <button
+                onClick={exportPracticeToWord}
+                className="py-3 px-4 bg-blue-600 text-white rounded-xl font-semibold text-[13px] shadow-sm hover:bg-blue-700 transition-colors"
+              >
+                Export to Word
+              </button>
             </div>
 
             {loading ? (
