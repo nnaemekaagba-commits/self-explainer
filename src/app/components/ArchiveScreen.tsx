@@ -17,7 +17,7 @@ interface ArchiveScreenProps {
 }
 
 export const ArchiveScreen = ({ onBack, onHomeClick, onInviteClick, onStudentWorkClick, onActivityClick, currentUserName = 'You' }: ArchiveScreenProps) => {
-  const [activeTab, setActiveTab] = useState<'archive' | 'activity-log' | 'colearner-chats'>('archive');
+  const [activeTab, setActiveTab] = useState<'archive' | 'activity-log' | 'practice-activity' | 'colearner-chats'>('archive');
   const [activities, setActivities] = useState<Activity[]>([]);
   const [activityLogs, setActivityLogs] = useState<ActivityLog[]>([]);
   const [colearnerChats, setColearnerChats] = useState<CoLearnerChatSession[]>([]);
@@ -29,6 +29,20 @@ export const ArchiveScreen = ({ onBack, onHomeClick, onInviteClick, onStudentWor
   const [expandedAttempts, setExpandedAttempts] = useState<Set<string>>(new Set());
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; log: ActivityLog } | null>(null);
   const [linkCopied, setLinkCopied] = useState(false);
+  const practiceLogs = activityLogs.filter((log) => log.isPractice);
+
+  const getPracticeProgress = (log: ActivityLog) => {
+    if (!log.steps.length) {
+      return 0;
+    }
+
+    const completedSteps = log.steps.filter((step) => step.completed).length;
+    return Math.round((completedSteps / log.steps.length) * 100);
+  };
+
+  const getPracticeMisses = (log: ActivityLog) => {
+    return Math.max(log.totalAttempts - log.totalCorrectResponses, 0);
+  };
 
   const toggleAttempt = (stepNumber: number, attemptNumber: number) => {
     const key = `${stepNumber}-${attemptNumber}`;
@@ -274,6 +288,14 @@ export const ArchiveScreen = ({ onBack, onHomeClick, onInviteClick, onStudentWor
             Activity Log
           </button>
           <button
+            onClick={() => setActiveTab('practice-activity')}
+            className={`py-2 px-4 rounded-xl ${
+              activeTab === 'practice-activity' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'
+            }`}
+          >
+            Practice Activity
+          </button>
+          <button
             onClick={() => setActiveTab('colearner-chats')}
             className={`py-2 px-4 rounded-xl ${
               activeTab === 'colearner-chats' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'
@@ -342,6 +364,92 @@ export const ArchiveScreen = ({ onBack, onHomeClick, onInviteClick, onStudentWor
                     </div>
                   </div>
                 ))}
+              </div>
+            )}
+          </>
+        )}
+
+        {activeTab === 'practice-activity' && (
+          <>
+            <div className="mb-4 bg-gradient-to-r from-orange-50 to-yellow-50 rounded-xl p-3 border border-orange-200">
+              <p className="text-[12px] text-orange-900 font-semibold mb-1">
+                Practice problem solving activity
+              </p>
+              <p className="text-[11px] text-orange-800">
+                Review how students worked through independent practice, including answers, explanations, misses, correct steps, and overall progress.
+              </p>
+            </div>
+
+            {loading ? (
+              <div className="flex items-center justify-center py-12">
+                <div className="text-gray-500 text-[14px]">Loading practice activity...</div>
+              </div>
+            ) : practiceLogs.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12 text-center px-6">
+                <BarChart3 size={48} className="text-gray-300 mb-3" />
+                <h3 className="text-[16px] font-semibold text-gray-900 mb-1">No Practice Activity Yet</h3>
+                <p className="text-[13px] text-gray-500">Independent practice attempts will appear here once students start solving them.</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {practiceLogs.map((log) => {
+                  const progress = getPracticeProgress(log);
+                  const misses = getPracticeMisses(log);
+
+                  return (
+                    <button
+                      key={log.id}
+                      onClick={() => setSelectedLog(log)}
+                      className="w-full text-left bg-white border border-orange-200 rounded-xl p-4 hover:shadow-sm transition-all"
+                    >
+                      <div className="flex items-start justify-between gap-3 mb-3">
+                        <div className="flex-1">
+                          <p className="text-[12px] font-semibold text-gray-900 mb-1">
+                            {log.question}
+                          </p>
+                          <p className="text-[10px] text-gray-500">
+                            Started {formatDateTime(log.startedAt)}
+                          </p>
+                        </div>
+                        <span className={`text-[10px] px-2 py-1 rounded-full ${log.status === 'completed' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
+                          {log.status === 'completed' ? 'Completed' : 'In Progress'}
+                        </span>
+                      </div>
+
+                      <div className="mb-3">
+                        <div className="flex items-center justify-between text-[10px] text-gray-600 mb-1">
+                          <span>Progress</span>
+                          <span>{progress}%</span>
+                        </div>
+                        <div className="w-full h-2 rounded-full bg-gray-200 overflow-hidden">
+                          <div
+                            className="h-full bg-gradient-to-r from-orange-500 to-yellow-500"
+                            style={{ width: `${progress}%` }}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-4 gap-2">
+                        <div className="bg-green-50 rounded-lg p-2 text-center">
+                          <p className="text-[14px] font-bold text-green-600">{log.totalCorrectResponses}</p>
+                          <p className="text-[8px] text-green-700">Correct</p>
+                        </div>
+                        <div className="bg-red-50 rounded-lg p-2 text-center">
+                          <p className="text-[14px] font-bold text-red-600">{misses}</p>
+                          <p className="text-[8px] text-red-700">Misses</p>
+                        </div>
+                        <div className="bg-blue-50 rounded-lg p-2 text-center">
+                          <p className="text-[14px] font-bold text-blue-600">{log.totalAttempts}</p>
+                          <p className="text-[8px] text-blue-700">Submissions</p>
+                        </div>
+                        <div className="bg-purple-50 rounded-lg p-2 text-center">
+                          <p className="text-[14px] font-bold text-purple-600">{log.steps.length}</p>
+                          <p className="text-[8px] text-purple-700">Steps</p>
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })}
               </div>
             )}
           </>
@@ -476,6 +584,23 @@ export const ArchiveScreen = ({ onBack, onHomeClick, onInviteClick, onStudentWor
                         <p className="text-[9px] text-gray-600">AI Queries</p>
                       </div>
                     </div>
+                    {selectedLog.isPractice && (
+                      <div className="mt-3">
+                        <div className="flex items-center justify-between text-[10px] text-gray-600 mb-1">
+                          <span>Practice progress</span>
+                          <span>{getPracticeProgress(selectedLog)}%</span>
+                        </div>
+                        <div className="w-full h-2 rounded-full bg-gray-200 overflow-hidden">
+                          <div
+                            className="h-full bg-gradient-to-r from-orange-500 to-yellow-500"
+                            style={{ width: `${getPracticeProgress(selectedLog)}%` }}
+                          />
+                        </div>
+                        <div className="mt-2 text-[10px] text-gray-600">
+                          Misses: <span className="font-semibold text-red-600">{getPracticeMisses(selectedLog)}</span>
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   {/* Step-by-Step Breakdown */}

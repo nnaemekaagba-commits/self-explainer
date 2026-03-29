@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { MathRenderer } from './MathRenderer';
 import { ScreenNavigation } from './ScreenNavigation';
 import { generateSimilarQuestion, validatePracticeAnswer } from '../../services/aiService';
+import { createActivityLog, markActivityCompleted, recordStepAttempt } from '../../services/activityLogService';
 import { FlippingBookLoader } from './FlippingBookLoader';
 
 interface Step {
@@ -54,6 +55,7 @@ export function IndependentPracticeScreen({
   const [attemptCompleted, setAttemptCompleted] = useState(false);
   const [attemptPassed, setAttemptPassed] = useState(false);
   const [isReturningToGuided, setIsReturningToGuided] = useState(false);
+  const [practiceLogId, setPracticeLogId] = useState<string | null>(null);
 
   // Generate similar question on mount
   useEffect(() => {
@@ -98,6 +100,29 @@ export function IndependentPracticeScreen({
 
     generateQuestion();
   }, [originalQuestion, originalAIData]);
+
+  useEffect(() => {
+    const initializePracticeLog = async () => {
+      if (!practiceQuestion?.steps?.length || practiceLogId) {
+        return;
+      }
+
+      try {
+        const logId = await createActivityLog(
+          `practice:${Date.now()}`,
+          practiceQuestion.question,
+          practiceQuestion.steps.length,
+          learningThreadId,
+          true
+        );
+        setPracticeLogId(logId);
+      } catch (error) {
+        console.error('Failed to create practice activity log:', error);
+      }
+    };
+
+    initializePracticeLog();
+  }, [learningThreadId, practiceLogId, practiceQuestion]);
 
   const resetForNextAttempt = () => {
     setStepAnswers({});
@@ -152,6 +177,21 @@ export function IndependentPracticeScreen({
       // Mark as submitted
       setSubmittedSteps(prev => new Set([...prev, stepNumber]));
 
+      if (practiceLogId) {
+        recordStepAttempt(
+          practiceLogId,
+          stepNumber,
+          answer,
+          explanation || '',
+          result.answerCorrect,
+          result.explanationCorrect,
+          0,
+          []
+        ).catch((error) => {
+          console.error('Failed to record practice attempt:', error);
+        });
+      }
+
       // Check if all steps are completed and correct
       const allSubmitted = practiceQuestion.steps.every(s => 
         submittedSteps.has(s.stepNumber) || s.stepNumber === stepNumber
@@ -169,6 +209,11 @@ export function IndependentPracticeScreen({
         if (allCorrect) {
           setAllStepsCompleted(true);
           setShowCelebration(true);
+          if (practiceLogId) {
+            markActivityCompleted(practiceLogId).catch((error) => {
+              console.error('Failed to mark practice log as completed:', error);
+            });
+          }
           setTimeout(() => setShowCelebration(false), 3000);
         }
       }
@@ -511,6 +556,9 @@ export function IndependentPracticeScreen({
                     if (!practiceQuestion?.question || !onReturnToGuidedPractice) return;
                     setIsReturningToGuided(true);
                     try {
+                      if (practiceLogId) {
+                        await markActivityCompleted(practiceLogId);
+                      }
                       await onReturnToGuidedPractice(practiceQuestion.question);
                     } finally {
                       setIsReturningToGuided(false);
