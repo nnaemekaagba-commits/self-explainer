@@ -144,10 +144,18 @@ export const ArchiveScreen = ({ onBack, onHomeClick, onInviteClick, onStudentWor
   };
 
   useEffect(() => {
-    loadActivities();
-    loadActivityLogs();
-    loadColearnerChats();
-  }, []);
+    if (activeTab === 'archive' && activities.length === 0) {
+      loadActivities();
+    }
+
+    if ((activeTab === 'activity-log' || activeTab === 'practice-activity') && activityLogs.length === 0) {
+      loadActivityLogs();
+    }
+
+    if (activeTab === 'colearner-chats' && colearnerChats.length === 0) {
+      loadColearnerChats();
+    }
+  }, [activeTab]);
 
   const loadActivities = async () => {
     setLoading(true);

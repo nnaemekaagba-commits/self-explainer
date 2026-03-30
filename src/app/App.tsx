@@ -436,8 +436,12 @@ export default function App() {
     handleOAuthCallback();
   }, []);
 
-  // Test backend connection on mount
+  // Test backend connection only in debug mode
   useEffect(() => {
+    if (!showDiagnostics) {
+      return;
+    }
+
     // Log session information for privacy verification
     const sessionId = getSessionId(currentUser?.id);
     console.log('🔐 SESSION ISOLATION ACTIVE');
@@ -449,7 +453,7 @@ export default function App() {
     testConnection().then(connected => {
       console.log('Backend connection test:', connected ? 'SUCCESS' : 'FAILED');
     });
-  }, [currentUser]);
+  }, [currentUser, showDiagnostics]);
 
   // Check for invite code in URL
   useEffect(() => {
