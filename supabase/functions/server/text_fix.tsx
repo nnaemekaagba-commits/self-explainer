@@ -79,6 +79,20 @@ function addSpacesToText(text: string): string {
   if (!text) return text;
   
   let fixed = text;
+
+  const phraseFixes: Array<[RegExp, string]> = [
+    [/solve\s*the\s*equation/gi, 'Solve the equation'],
+    [/for\s*the\s*variable/gi, 'for the variable'],
+    [/solve\s*for/gi, 'solve for'],
+    [/find\s*the\s*value/gi, 'find the value'],
+    [/evaluate\s*the\s*expression/gi, 'evaluate the expression'],
+    [/simplify\s*the\s*expression/gi, 'simplify the expression'],
+    [/with\s*respect\s*to/gi, 'with respect to'],
+  ];
+
+  phraseFixes.forEach(([pattern, replacement]) => {
+    fixed = fixed.replace(pattern, replacement);
+  });
   
   // IMPORTANT: Don't split words that are already properly formatted
   // Check if text contains consecutive uppercase letters (likely acronyms or emphasis)
@@ -89,6 +103,18 @@ function addSpacesToText(text: string): string {
   if (!hasConsecutiveUppercase) {
     fixed = fixed.replace(/([a-z])([A-Z])/g, '$1 $2');
   }
+
+  // Add spaces between numbers and letters in OCR-like strings
+  fixed = fixed.replace(/(\d)([A-Za-z])/g, '$1 $2');
+  fixed = fixed.replace(/([A-Za-z])(\d)/g, '$1 $2');
+
+  // Add spaces around common math operators in plain text regions
+  fixed = fixed
+    .replace(/\s*([=+\-−])\s*/g, ' $1 ')
+    .replace(/\s{2,}/g, ' ');
+
+  // Separate common trig/function names from following variables
+  fixed = fixed.replace(/\b(sin|cos|tan|cot|sec|csc|log|ln)(?=[A-Za-z(])/gi, '$1 ');
   
   // Add space after period followed by capital letter (sentence boundary)
   fixed = fixed.replace(/\.([A-Z])/g, '. $1');
@@ -104,5 +130,5 @@ function addSpacesToText(text: string): string {
   // would split words like "FORCE" into "FOR CE" by matching common words
   // within larger words. This fix has been removed to prevent word-splitting.
   
-  return fixed;
+  return fixed.trim();
 }

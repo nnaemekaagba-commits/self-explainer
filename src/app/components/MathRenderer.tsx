@@ -198,6 +198,12 @@ function looksLikeMathLine(line: string): boolean {
     return true;
   }
 
+  const containsInstructionalLanguage =
+    /solve\s*the\s*equation|for\s*the\s*variable|solve\s*for|find\s*the\s*value|evaluate\s*the\s*expression|simplify\s*the\s*expression/i.test(trimmed);
+  if (containsInstructionalLanguage) {
+    return false;
+  }
+
   const longWordCount = (trimmed.match(/\b[A-Za-z]{4,}\b/g) || []).length;
   const containsMathSyntax =
     /\\(frac|sqrt|sum|int|lim|pi|theta|alpha|beta|gamma|delta|lambda|mu|sigma|omega|times|cdot|leq|geq|neq|approx|text)\b/.test(trimmed) ||
@@ -211,6 +217,10 @@ function looksLikeMathLine(line: string): boolean {
 function looksLikeInlineMathSegment(segment: string): boolean {
   const trimmed = segment.trim();
   if (!trimmed || trimmed.length > 120) return false;
+
+  if (/solve\s*the\s*equation|for\s*the\s*variable|solve\s*for|find\s*the\s*value/i.test(trimmed)) {
+    return false;
+  }
 
   const longWordCount = (trimmed.match(/\b[A-Za-z]{4,}\b/g) || []).length;
   const containsMathSyntax =
