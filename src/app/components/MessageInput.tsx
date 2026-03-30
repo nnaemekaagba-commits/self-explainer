@@ -11,19 +11,19 @@ async function compressImage(dataUrl: string, quality: number = 0.7, maxWidth: n
       const canvas = document.createElement('canvas');
       let width = img.width;
       let height = img.height;
-      
+
       // Resize if image is too large
       if (width > maxWidth) {
         height = (height * maxWidth) / width;
         width = maxWidth;
       }
-      
+
       canvas.width = width;
       canvas.height = height;
-      
+
       const ctx = canvas.getContext('2d');
       ctx?.drawImage(img, 0, 0, width, height);
-      
+
       // Convert to JPEG with quality setting for better compression
       const compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
       resolve(compressedDataUrl);
@@ -66,7 +66,7 @@ export function MessageInput({
 
   // Use ref to store the current input value so parent can access it without causing re-renders
   const inputValueRef = useRef(inputValue);
-  
+
   // Update ref whenever inputValue changes
   useEffect(() => {
     inputValueRef.current = inputValue;
@@ -77,7 +77,7 @@ export function MessageInput({
     if (onGetCurrentInput) {
       onGetCurrentInput(() => inputValueRef.current);
     }
-  }, []); // Empty dependency array - only run once
+  }, []);
 
   useEffect(() => {
     if (!prefillToken) return;
@@ -92,27 +92,24 @@ export function MessageInput({
 
       const question = inputValue.trim();
 
-      // Notify parent about the question and image
-      console.log('📤 MessageInput - Submitting:', { 
-        question, 
+      console.log('MessageInput - Submitting:', {
+        question,
         hasImage: !!uploadedImage,
         imageLength: uploadedImage?.length || 0
       });
-      
+
       if (onQuestionSubmit) {
         onQuestionSubmit(question, uploadedImage || undefined);
       }
 
       try {
-        // Pass both the question and the image to the AI
-        // The AI will extract text from the image and combine it with the typed question
-        console.log('🤖 MessageInput - Calling solveProblem with image:', !!uploadedImage);
+        console.log('MessageInput - Calling solveProblem with image:', !!uploadedImage);
         const result = await solveProblem(question, uploadedImage || undefined);
         if (onProblemSolved) {
           onProblemSolved(result);
         }
         setInputValue('');
-        setUploadedImage(null); // Clear the uploaded image after sending
+        setUploadedImage(null);
         if (onNavigate) {
           onNavigate();
         }
@@ -120,7 +117,6 @@ export function MessageInput({
         console.error('Failed to solve problem:', err);
         setError(err instanceof Error ? err.message : 'Failed to process your question');
 
-        // Use demo data as fallback
         const demoData = {
           solution: `For the problem "${inputValue.trim()}", here's the solution: First, identify what you're solving for. Then apply the appropriate mathematical operations step by step.`,
           strategy: 'Break down the problem into smaller parts. Solve each part methodically. Verify your answer makes sense.',
@@ -165,94 +161,59 @@ export function MessageInput({
   const handleUpload = (file: File) => {
     setShowUploadMenu(false);
     setIsProcessing(true);
-    setProcessingStatus('📸 Reading image...');
+    setProcessingStatus('Preparing upload...');
 
-    // Read the file and convert to base64 or text
     const reader = new FileReader();
 
     reader.onload = async () => {
       try {
         const fileContent = reader.result;
         let aiQuestionText = `Uploaded file: ${file.name}`;
-        let imageDataUrl: string | undefined = undefined;
 
-        // If it's an image, we'll send it to AI for analysis and OCR
         if (file.type.startsWith('image/')) {
-          setProcessingStatus('🔄 Compressing image...');
-          // Compress image for faster upload and processing
-          const compressedDataUrl = await compressImage(fileContent as string, 0.7, 1200);
-          imageDataUrl = compressedDataUrl;
-          setProcessingStatus('✓ Image ready!');
-          
-          console.log('📸 MessageInput - Image uploaded:', {
+          setProcessingStatus('Compressing image...');
+          const imageDataUrl = await compressImage(fileContent as string, 0.7, 1200);
+
+          console.log('MessageInput - Image uploaded:', {
             fileName: file.name,
             originalSize: file.size,
             fileType: file.type,
             compressedLength: imageDataUrl.length,
             compressionRatio: ((1 - imageDataUrl.length / (fileContent as string).length) * 100).toFixed(1) + '%'
           });
-          
-          // Store the uploaded image to display it
+
           setUploadedImage(imageDataUrl);
-          
-          // Notify parent about the uploaded image
-          if (onQuestionSubmit) {
-            console.log('📤 MessageInput - Notifying parent of image upload');
-            onQuestionSubmit('', imageDataUrl);
+          console.log('MessageInput - Image ready for send');
+          console.log('Final size:', (imageDataUrl.length / 1024).toFixed(2), 'KB');
+
+          if (!inputValueRef.current.trim()) {
+            setInputValue('Image uploaded. Add any extra instructions if you want, then click Send.');
           }
-          
-          aiQuestionText = `Please read and extract any math problem or text shown in this image, then create a guided solution.`;
-          
-          console.log('📸 Image compressed and ready');
-          console.log('📊 Final size:', (imageDataUrl.length / 1024).toFixed(2), 'KB');
-          console.log('🔗 Sending to AI for OCR extraction...');
-        } else if (file.type === 'application/pdf') {
-          // PDFs require manual input for now
-          // Note: Full PDF text extraction would require a backend solution
-          setInputValue(`📄 ${file.name}\n\n[PDF uploaded! Please copy and paste the math problem from your PDF below, then click Send]\n\nTip: You can also take a screenshot of the PDF and upload it as an image for automatic extraction!\n\nExample: Solve for x: 2x + 5 = 15`);
-          setIsProcessing(false);
+
+          setProcessingStatus('');
           return;
-        } else {
-          // For text files, we can directly read the content
-          const extractedText = fileContent as string;
-          aiQuestionText = extractedText;
         }
 
-        // Try to get AI response (which will include the extracted text from images)
-        try {
-          // Pass the image data URL if it's an image
-          const result = await solveProblem(aiQuestionText, imageDataUrl);
+        if (file.type === 'application/pdf') {
+          setInputValue(`[PDF uploaded: ${file.name}]\n\nPlease copy and paste the math problem from your PDF below, then click Send.\n\nTip: you can also upload a screenshot as an image for faster processing.`);
+          setIsProcessing(false);
+          return;
+        }
 
-          // Extract the question from the AI response
+        aiQuestionText = fileContent as string;
+
+        try {
+          const result = await solveProblem(aiQuestionText);
           const extractedText = result.extractedQuestion || aiQuestionText;
 
-          // Put the extracted text in the input field
           setInputValue(extractedText);
-
-          // DON'T automatically navigate or trigger the problem solved yet
-          // User should review the extracted text and click Send
-          console.log('✅ Extracted text from image:', extractedText);
+          console.log('Extracted text from file:', extractedText);
           console.log('Full AI response:', result);
           setProcessingStatus('');
         } catch (err) {
           setProcessingStatus('');
           console.error('Failed to process uploaded file:', err);
-
-          // Set a helpful message for the user
-          let extractedText = '';
-          if (file.type.startsWith('image/')) {
-            extractedText = `📷 ${file.name}\n\n[Image uploaded! AI extraction failed. Please type the math problem shown in your image below, then click Send]\n\nExample: Solve for x: 2x + 5 = 15`;
-          } else if (file.type === 'application/pdf') {
-            // For PDFs, show the extracted text but mention AI failed
-            extractedText = aiQuestionText.startsWith('Uploaded file:') 
-              ? `📄 ${file.name}\n\n[PDF uploaded! Please verify and edit the extracted text below, then click Send]\n\n${aiQuestionText}`
-              : aiQuestionText;
-          } else {
-            extractedText = `📎 ${file.name}\n\n[File uploaded! Please type the math problem below, then click Send]`;
-          }
-
-          // Put the message in the input field
-          setInputValue(extractedText);
+          setInputValue(`[File uploaded: ${file.name}]\n\nPlease type the math problem below, then click Send.`);
         }
       } catch (err) {
         console.error('Error reading file:', err);
@@ -262,13 +223,12 @@ export function MessageInput({
       }
     };
 
-    // Read file as appropriate type
     if (file.type.startsWith('image/')) {
-      reader.readAsDataURL(file); // Convert to base64 data URL for images
+      reader.readAsDataURL(file);
     } else if (file.type === 'application/pdf') {
-      reader.readAsArrayBuffer(file); // Read as array buffer for PDFs
+      reader.readAsArrayBuffer(file);
     } else {
-      reader.readAsText(file); // Read as text for other files
+      reader.readAsText(file);
     }
   };
 
@@ -284,13 +244,11 @@ export function MessageInput({
 
         {showUploadMenu && (
           <>
-            {/* Backdrop to close menu */}
             <div
               className="fixed inset-0 z-10"
               onClick={() => setShowUploadMenu(false)}
             />
 
-            {/* Upload menu */}
             <div className="absolute left-0 top-12 z-20 bg-white rounded-xl shadow-lg border border-gray-200 py-2 w-48">
               <label className="w-full px-4 py-2.5 flex items-center gap-3 hover:bg-gray-50 transition-colors text-left cursor-pointer">
                 <Image size={18} className="text-blue-600" />
@@ -346,13 +304,12 @@ export function MessageInput({
           </div>
         ) : (
           <>
-            <div 
+            <div
               className={`w-full rounded-3xl border border-gray-200 shadow-sm transition-all duration-200 ${
                 uploadedImage ? 'p-3 bg-gradient-to-br from-purple-50 to-blue-50' : ''
               }`}
               style={!uploadedImage ? { backgroundColor: bgColor } : undefined}
             >
-              {/* Show uploaded image if available */}
               {uploadedImage && (
                 <div className="mb-3 relative bg-white rounded-xl p-2 border border-purple-200 shadow-sm">
                   <div className="flex items-center gap-2 mb-2 px-1">
@@ -360,9 +317,9 @@ export function MessageInput({
                     <span className="text-xs font-medium text-gray-700">Image uploaded successfully</span>
                   </div>
                   <div className="relative inline-block">
-                    <img 
-                      src={uploadedImage} 
-                      alt="Uploaded" 
+                    <img
+                      src={uploadedImage}
+                      alt="Uploaded"
                       className="max-w-full max-h-64 rounded-lg border border-gray-300 shadow-sm object-contain"
                     />
                     <button
@@ -370,12 +327,12 @@ export function MessageInput({
                       className="absolute -top-2 -right-2 w-7 h-7 bg-red-500 text-white rounded-full flex items-center justify-center text-sm font-bold hover:bg-red-600 transition-colors shadow-lg hover:scale-110"
                       title="Remove image"
                     >
-                      ✕
+                      ×
                     </button>
                   </div>
                 </div>
               )}
-              
+
               <textarea
                 placeholder={placeholder}
                 rows={uploadedImage ? 2 : 3}
@@ -387,6 +344,9 @@ export function MessageInput({
                 style={!uploadedImage ? { backgroundColor: bgColor } : undefined}
               />
             </div>
+            {error && (
+              <p className="mt-2 text-xs text-red-600">{error}</p>
+            )}
             {showSendButton ? (
               <button
                 onClick={handleSend}
