@@ -234,7 +234,7 @@ function looksLikeInlineMathSegment(segment: string): boolean {
 }
 
 function sanitizeLatexExpression(expression: string): string {
-  let sanitized = expression.trim();
+  let sanitized = unescapeLatexDelimiters(expression.trim());
 
   if (sanitized.startsWith('\\(') && sanitized.endsWith('\\)')) {
     sanitized = sanitized.slice(2, -2).trim();
@@ -245,6 +245,11 @@ function sanitizeLatexExpression(expression: string): string {
   if (sanitized.startsWith('$$') && sanitized.endsWith('$$')) {
     sanitized = sanitized.slice(2, -2).trim();
   }
+
+  sanitized = sanitized
+    .replace(/\\\(([\s\S]*?)\\\)/g, '$1')
+    .replace(/\\\[((?:[\s\S]*?))\\\]/g, '$1')
+    .replace(/\\p(?![a-zA-Z])/g, '\\pi');
 
   return sanitized
     .replace(/\\imes\b/g, '\\times')
