@@ -106,9 +106,13 @@ function isEscaped(text: string, index: number): boolean {
 
 function findClosingDelimiter(text: string, start: number, delimiter: string): number {
   let cursor = start;
+  const isBackslashDelimiter = delimiter.startsWith('\\');
 
   while (cursor <= text.length - delimiter.length) {
-    if (text.slice(cursor, cursor + delimiter.length) === delimiter && !isEscaped(text, cursor)) {
+    if (
+      text.slice(cursor, cursor + delimiter.length) === delimiter &&
+      (isBackslashDelimiter || !isEscaped(text, cursor))
+    ) {
       return cursor;
     }
 
