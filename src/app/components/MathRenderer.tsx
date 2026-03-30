@@ -249,7 +249,12 @@ function sanitizeLatexExpression(expression: string): string {
   sanitized = sanitized
     .replace(/\\\(([\s\S]*?)\\\)/g, '$1')
     .replace(/\\\[((?:[\s\S]*?))\\\]/g, '$1')
-    .replace(/\\p(?![a-zA-Z])/g, '\\pi');
+    .replace(/\\p(?![a-zA-Z])/g, '\\pi')
+    .replace(/\\\(/g, '')
+    .replace(/\\\)/g, '')
+    .replace(/\\\[/g, '')
+    .replace(/\\\]/g, '')
+    .replace(/\b(?<!\\)(sin|cos|tan|cot|sec|csc|log|ln)(?=\s*[\w(])/g, '\\$1');
 
   return sanitized
     .replace(/\\imes\b/g, '\\times')
