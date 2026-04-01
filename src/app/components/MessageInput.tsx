@@ -183,11 +183,31 @@ export function MessageInput({
           });
 
           setUploadedImage(imageDataUrl);
+          if (onQuestionSubmit) {
+            onQuestionSubmit(inputValueRef.current.trim(), imageDataUrl);
+          }
           console.log('MessageInput - Image ready for send');
           console.log('Final size:', (imageDataUrl.length / 1024).toFixed(2), 'KB');
 
-          if (!inputValueRef.current.trim()) {
-            setInputValue('Image uploaded. Add any extra instructions if you want, then click Send.');
+          setProcessingStatus('Reading question from image...');
+
+          try {
+            const result = await solveProblem(
+              'Please read and extract the problem shown in this image exactly as clearly as possible.',
+              imageDataUrl
+            );
+            const extractedText = result.extractedQuestion?.trim();
+
+            if (extractedText) {
+              setInputValue(extractedText);
+            } else if (!inputValueRef.current.trim()) {
+              setInputValue('Image uploaded. Add any extra instructions if you want, then click Send.');
+            }
+          } catch (err) {
+            console.error('Failed to extract question from uploaded image:', err);
+            if (!inputValueRef.current.trim()) {
+              setInputValue('Image uploaded. Please type the question shown in the image, then click Send.');
+            }
           }
 
           setProcessingStatus('');
