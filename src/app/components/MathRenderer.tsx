@@ -362,7 +362,6 @@ function normalizeAugmentedMatrix(body: string): string {
     .replace(/\r\n/g, '\n')
     .replace(/\n/g, ' ')
     .replace(/\s*\\\\\s*/g, ' @@ROW@@ ')
-    .replace(/\s*\\\s*(?=[-A-Za-z0-9])/g, ' @@ROW@@ ')
     .replace(/\s{2,}/g, ' ')
     .trim();
 
@@ -384,25 +383,27 @@ function normalizeAugmentedMatrix(body: string): string {
 
   if (parsedRows.length === 1) {
     const flattened = parsedRows[0];
-    const separatorIndexes = flattened
-      .map((cell, index) => (cell === '|' ? index : -1))
-      .filter((index) => index !== -1);
+    const firstBarIndex = flattened.indexOf('|');
 
-    if (separatorIndexes.length > 1) {
-      const inferredRows: string[][] = [];
-      let start = 0;
+    if (firstBarIndex > 0) {
+      const inferredRowWidth = firstBarIndex + 2;
 
-      separatorIndexes.forEach((separatorIndex, rowIndex) => {
-        const nextSeparator = separatorIndexes[rowIndex + 1] ?? flattened.length;
-        const rowCells = flattened.slice(start, nextSeparator);
-        if (rowCells.length) {
-          inferredRows.push(rowCells);
+      if (flattened.length % inferredRowWidth === 0) {
+        const inferredRows: string[][] = [];
+        let isConsistent = true;
+
+        for (let index = 0; index < flattened.length; index += inferredRowWidth) {
+          const chunk = flattened.slice(index, index + inferredRowWidth);
+          if (chunk[firstBarIndex] !== '|') {
+            isConsistent = false;
+            break;
+          }
+          inferredRows.push(chunk);
         }
-        start = nextSeparator;
-      });
 
-      if (inferredRows.length > 1) {
-        parsedRows.splice(0, parsedRows.length, ...inferredRows);
+        if (isConsistent && inferredRows.length > 1) {
+          parsedRows.splice(0, parsedRows.length, ...inferredRows);
+        }
       }
     }
   }
