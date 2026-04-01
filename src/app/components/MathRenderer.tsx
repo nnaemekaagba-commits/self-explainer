@@ -210,7 +210,8 @@ function looksLikeMathLine(line: string): boolean {
   if (
     (trimmed.startsWith('\\[') && trimmed.endsWith('\\]')) ||
     (trimmed.startsWith('\\(') && trimmed.endsWith('\\)')) ||
-    (trimmed.startsWith('$$') && trimmed.endsWith('$$'))
+    (trimmed.startsWith('$$') && trimmed.endsWith('$$')) ||
+    /^\\begin\{(?:[pbvBV]?matrix|array|cases|aligned|align\*?)\}[\s\S]*\\end\{(?:[pbvBV]?matrix|array|cases|aligned|align\*?)\}$/.test(trimmed)
   ) {
     return true;
   }
@@ -223,10 +224,10 @@ function looksLikeMathLine(line: string): boolean {
 
   const longWordCount = (trimmed.match(/\b[A-Za-z]{4,}\b/g) || []).length;
   const containsMathSyntax =
-    /\\(frac|sqrt|sum|int|lim|pi|theta|alpha|beta|gamma|delta|lambda|mu|sigma|omega|times|cdot|leq|geq|neq|approx|text)\b/.test(trimmed) ||
+    /\\(frac|sqrt|sum|int|lim|pi|theta|alpha|beta|gamma|delta|lambda|mu|sigma|omega|times|cdot|leq|geq|neq|approx|text|begin|end)\b/.test(trimmed) ||
     /[=<>+\-*/^_]/.test(trimmed) ||
     /[\u2212\u221a\u00b1\u00d7\u00f7\u2264\u2265\u2260\u2248\u2192\u03c0]/.test(trimmed);
-  const mostlyMathCharacters = /^[A-Za-z0-9\s=<>+\-*/^_()[\]{}.,:;\\|\u2212\u221a\u00b1\u00d7\u00f7\u2264\u2265\u2260\u2248\u2192\u03c0]+$/.test(trimmed);
+  const mostlyMathCharacters = /^[A-Za-z0-9\s=<>+\-*/^_()[\]{}.,:;\\|&\u2212\u221a\u00b1\u00d7\u00f7\u2264\u2265\u2260\u2248\u2192\u03c0]+$/.test(trimmed);
 
   return containsMathSyntax && longWordCount <= 2 && mostlyMathCharacters && trimmed.length <= 180;
 }
@@ -235,17 +236,21 @@ function looksLikeInlineMathSegment(segment: string): boolean {
   const trimmed = segment.trim();
   if (!trimmed || trimmed.length > 120) return false;
 
+  if (/^\\begin\{(?:[pbvBV]?matrix|array|cases|aligned|align\*?)\}[\s\S]*\\end\{(?:[pbvBV]?matrix|array|cases|aligned|align\*?)\}$/.test(trimmed)) {
+    return true;
+  }
+
   if (/solve\s*the\s*equation|for\s*the\s*variable|solve\s*for|find\s*the\s*value/i.test(trimmed)) {
     return false;
   }
 
   const longWordCount = (trimmed.match(/\b[A-Za-z]{4,}\b/g) || []).length;
   const containsMathSyntax =
-    /\\(frac|sqrt|sum|int|lim|pi|theta|alpha|beta|gamma|delta|lambda|mu|sigma|omega|times|cdot|leq|geq|neq|approx|text|sin|cos|tan)\b/.test(trimmed) ||
+    /\\(frac|sqrt|sum|int|lim|pi|theta|alpha|beta|gamma|delta|lambda|mu|sigma|omega|times|cdot|leq|geq|neq|approx|text|sin|cos|tan|begin|end)\b/.test(trimmed) ||
     /[=<>+\-*/^_]/.test(trimmed) ||
     /[\u2212\u221a\u00b1\u00d7\u00f7\u2264\u2265\u2260\u2248\u2192\u03c0]/.test(trimmed);
   const hasMathAtoms = /[A-Za-z]/.test(trimmed) || /\d/.test(trimmed);
-  const mostlyMathCharacters = /^[A-Za-z0-9\s=<>+\-*/^_()[\]{}.,:;\\|]+$/.test(trimmed);
+  const mostlyMathCharacters = /^[A-Za-z0-9\s=<>+\-*/^_()[\]{}.,:;\\|&]+$/.test(trimmed);
 
   return containsMathSyntax && hasMathAtoms && longWordCount <= 2 && mostlyMathCharacters;
 }
