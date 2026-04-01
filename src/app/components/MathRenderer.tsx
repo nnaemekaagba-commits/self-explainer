@@ -48,6 +48,11 @@ export function normalizePlainMathExpressionInText(content: string): string {
 
 export function normalizeEditableMathText(content: string): string {
   return decodeLatexEscapesForEditing(content)
+    .replace(/\\\(/g, '(')
+    .replace(/\\\)/g, ')')
+    .replace(/\\\[/g, '[')
+    .replace(/\\\]/g, ']')
+    .replace(/\$\$?/g, '')
     .replace(/([A-Za-z])(?=\d)/g, '$1 ')
     .replace(/(?<=\d)([A-Za-z])/g, ' $1')
     .replace(/\s+,/g, ',')
@@ -357,7 +362,7 @@ function normalizeAugmentedMatrix(body: string): string {
     .replace(/\r\n/g, '\n')
     .replace(/\n/g, ' ')
     .replace(/\s*\\\\\s*/g, ' @@ROW@@ ')
-    .replace(/\s+\\\s+/g, ' @@ROW@@ ')
+    .replace(/\s*\\\s*(?=[-A-Za-z0-9])/g, ' @@ROW@@ ')
     .replace(/\s{2,}/g, ' ')
     .trim();
 
@@ -376,6 +381,31 @@ function normalizeAugmentedMatrix(body: string): string {
       .map((cell) => cell.trim())
       .filter(Boolean),
   );
+
+  if (parsedRows.length === 1) {
+    const flattened = parsedRows[0];
+    const separatorIndexes = flattened
+      .map((cell, index) => (cell === '|' ? index : -1))
+      .filter((index) => index !== -1);
+
+    if (separatorIndexes.length > 1) {
+      const inferredRows: string[][] = [];
+      let start = 0;
+
+      separatorIndexes.forEach((separatorIndex, rowIndex) => {
+        const nextSeparator = separatorIndexes[rowIndex + 1] ?? flattened.length;
+        const rowCells = flattened.slice(start, nextSeparator);
+        if (rowCells.length) {
+          inferredRows.push(rowCells);
+        }
+        start = nextSeparator;
+      });
+
+      if (inferredRows.length > 1) {
+        parsedRows.splice(0, parsedRows.length, ...inferredRows);
+      }
+    }
+  }
 
   const barIndex = parsedRows[0].findIndex((cell) => cell === '|');
   if (barIndex === -1) {
