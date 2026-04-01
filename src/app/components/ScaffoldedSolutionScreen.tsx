@@ -1,5 +1,5 @@
 import { ArrowLeft, CheckCircle2, Edit3 } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { normalizeEditableMathText } from './MathRenderer';
 import { RenderableMathBlock } from './RenderableMathBlock';
 import { RenderTextFormulaButton } from './RenderTextFormulaButton';
@@ -32,11 +32,7 @@ export function ScaffoldedSolutionScreen({
 }: ScaffoldedSolutionScreenProps) {
   const [isQuestionConfirmed, setIsQuestionConfirmed] = useState(false);
   const currentQuestionText = aiData?.extractedQuestion || userQuestion || '';
-  const [correctionText, setCorrectionText] = useState(currentQuestionText);
-
-  useEffect(() => {
-    setCorrectionText(currentQuestionText);
-  }, [currentQuestionText]);
+  const [correctionText, setCorrectionText] = useState('');
 
   const handleMarkAsCorrect = () => {
     setIsQuestionConfirmed(true);
@@ -143,10 +139,10 @@ export function ScaffoldedSolutionScreen({
                   <span>Update Question</span>
                 </button>
                 <button
-                  onClick={() => setCorrectionText(currentQuestionText)}
+                  onClick={() => setCorrectionText('')}
                   className="px-4 py-2 bg-white text-blue-700 text-[13px] font-medium rounded-lg border border-blue-300 hover:bg-blue-50 transition-colors"
                 >
-                  Reset
+                  Clear
                 </button>
                 <button
                   onClick={handleMarkAsCorrect}
