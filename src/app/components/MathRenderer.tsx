@@ -8,7 +8,7 @@ interface MathRendererProps {
 }
 
 export function normalizePlainMathExpressionInText(content: string): string {
-  return content
+  return normalizeContent(content)
     .replace(/\\\((.*?)\\\)/gs, '$$$1$$')
     .replace(/\\\[(.*?)\\\]/gs, '$$$1$$')
     .replace(/(?<!\\)\b(sin|cos|tan|cot|sec|csc|log|ln)\b/g, '\\$1')
@@ -138,13 +138,18 @@ function findClosingDelimiter(text: string, start: number, delimiter: string): n
 function shouldTreatAsInlineMath(text: string, index: number): boolean {
   const nextChar = text[index + 1];
   const prevChar = text[index - 1];
+  const closingIndex = findClosingDelimiter(text, index + 1, '$');
+  const candidate = closingIndex === -1 ? '' : text.slice(index + 1, closingIndex).trim();
 
   if (!nextChar || nextChar === '$' || /\s/.test(nextChar)) {
     return false;
   }
 
   if (/[0-9]/.test(nextChar) && (!prevChar || /\s|[(\[{=:;,]/.test(prevChar))) {
-    return false;
+    const looksLikeCurrencyOnly = /^\d+(?:[.,]\d{1,2})?$/.test(candidate);
+    if (looksLikeCurrencyOnly) {
+      return false;
+    }
   }
 
   return true;
