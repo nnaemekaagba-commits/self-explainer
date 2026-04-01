@@ -4,6 +4,19 @@ import katex from 'katex';
 interface MathRendererProps {
   content: string;
   className?: string;
+  normalizeContent?: boolean;
+}
+
+function normalizePlainMathExpressionInText(content: string): string {
+  return content
+    .replace(/\\\((.*?)\\\)/gs, '$$$1$$')
+    .replace(/\\\[(.*?)\\\]/gs, '$$$1$$')
+    .replace(/(?<!\\)\b(sin|cos|tan|cot|sec|csc|log|ln)\b/g, '\\$1')
+    .replace(/\\p\b/g, '\\pi')
+    .replace(/([A-Za-z])(?=\d)/g, '$1 ')
+    .replace(/(?<=\d)([A-Za-z])/g, ' $1')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
 }
 
 type Token =
@@ -451,7 +464,7 @@ function appendInlineContent(container: HTMLElement, text: string) {
   });
 }
 
-export function MathRenderer({ content, className }: MathRendererProps) {
+export function MathRenderer({ content, className, normalizeContent = false }: MathRendererProps) {
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -465,7 +478,7 @@ export function MathRenderer({ content, className }: MathRendererProps) {
     }
 
     try {
-      const blocks = buildBlocks(content);
+      const blocks = buildBlocks(normalizeContent ? normalizePlainMathExpressionInText(content) : content);
       let listElement: HTMLUListElement | null = null;
 
       blocks.forEach((block) => {
@@ -503,7 +516,7 @@ export function MathRenderer({ content, className }: MathRendererProps) {
       console.error('MathRenderer error:', error);
       container.textContent = content;
     }
-  }, [content]);
+  }, [content, normalizeContent]);
 
   return <div ref={containerRef} className={`math-content antialiased ${className || ''}`} />;
 }

@@ -2,6 +2,7 @@ import { useState, useRef } from 'react';
 import { ArrowLeft, Users, Image as ImageIcon, Lightbulb } from 'lucide-react';
 import { validateStep, solveProblem } from '../../services/aiService';
 import { MathRenderer } from './MathRenderer';
+import { RenderTextFormulaButton } from './RenderTextFormulaButton';
 import { ScreenNavigation } from './ScreenNavigation';
 import { MessageInput } from './MessageInput';
 import { ActionButton } from './ActionButton';
@@ -74,6 +75,7 @@ export function InteractiveGuidedSolution({
   const [uploadedImages, setUploadedImages] = useState<Record<number, string>>({});
   const [uploadedAnswerImages, setUploadedAnswerImages] = useState<Record<number, string>>({});
   const [validating, setValidating] = useState<number | null>(null);
+  const [normalizeRenderedContent, setNormalizeRenderedContent] = useState(false);
   // Use props for step tracking instead of local state
   const currentStepIndex = propCurrentStepIndex;
   const completedSteps = propCompletedSteps;
@@ -289,7 +291,7 @@ export function InteractiveGuidedSolution({
         <div className="ml-4 space-y-3">
           {/* Description */}
           <div className="text-[12px] text-gray-700">
-            <MathRenderer content={step.description} />
+            <MathRenderer content={step.description} normalizeContent={normalizeRenderedContent} />
           </div>
 
           {/* Self-Explanation Prompt */}
@@ -300,7 +302,7 @@ export function InteractiveGuidedSolution({
                 Engineering Thinking:
               </p>
               <div className="text-[13px] text-gray-800 italic">
-                <MathRenderer content={step.hint} />
+                <MathRenderer content={step.hint} normalizeContent={normalizeRenderedContent} />
               </div>
             </div>
           )}
@@ -313,7 +315,7 @@ export function InteractiveGuidedSolution({
                 <span className="uppercase tracking-[0.22em]">Key Formula</span>
               </p>
               <div className="text-[24px] text-gray-900 font-extrabold bg-white p-7 rounded-2xl shadow-inner border-2 border-purple-300" style={{ fontWeight: 900 }}>
-                <MathRenderer content={step.formula} />
+                <MathRenderer content={step.formula} normalizeContent={normalizeRenderedContent} />
               </div>
             </div>
           )}
@@ -550,6 +552,13 @@ export function InteractiveGuidedSolution({
             </div>
           </div>
 
+          <div className="flex justify-end">
+            <RenderTextFormulaButton
+              enabled={normalizeRenderedContent}
+              onToggle={() => setNormalizeRenderedContent((prev) => !prev)}
+            />
+          </div>
+
           {/* Uploaded Diagram Display - IMPORTANT FOR STUDENTS TO REFERENCE */}
           {uploadedImageUrl && (
             <div className="bg-blue-50 rounded-xl p-4 shadow-sm border border-blue-200">
@@ -571,7 +580,7 @@ export function InteractiveGuidedSolution({
           <div className="bg-green-50 rounded-xl p-4 shadow-sm border border-green-200">
             <div className="text-[14px] text-green-900 mb-2">
               <span className="font-semibold">✓ Problem:</span>{' '}
-              <MathRenderer content={userQuestion || "[Problem statement]"} className="inline-block align-middle" />
+              <MathRenderer content={userQuestion || "[Problem statement]"} className="inline-block align-middle" normalizeContent={normalizeRenderedContent} />
             </div>
           </div>
 

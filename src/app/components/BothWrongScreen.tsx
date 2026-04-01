@@ -2,6 +2,7 @@ import { ArrowLeft, XCircle, Lightbulb, Send, MessageCircle } from 'lucide-react
 import { useState, useRef, useEffect } from 'react';
 import { askAIForHelp, generateStepSolution } from '../../services/aiService';
 import { MathRenderer } from './MathRenderer';
+import { RenderTextFormulaButton } from './RenderTextFormulaButton';
 
 interface ChatMessage {
   role: 'user' | 'ai';
@@ -54,6 +55,7 @@ export function BothWrongScreen({
   const [chatInput, setChatInput] = useState('');
   const [queriesRemaining, setQueriesRemaining] = useState(4);
   const [isAskingAI, setIsAskingAI] = useState(false);
+  const [normalizeRenderedContent, setNormalizeRenderedContent] = useState(false);
   const [correctSolution, setCorrectSolution] = useState<{answer: string; explanation: string} | null>(null);
   const [loadingSolution, setLoadingSolution] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
@@ -169,9 +171,15 @@ export function BothWrongScreen({
                 <MessageCircle size={16} className="text-purple-600" />
                 <p className="text-[13px] font-semibold text-purple-900">Ask AI for Help</p>
               </div>
-              <span className="text-[11px] font-medium text-purple-700 bg-purple-100 px-2 py-1 rounded-full">
-                {queriesRemaining}/4 queries left
-              </span>
+              <div className="flex items-center gap-2">
+                <RenderTextFormulaButton
+                  enabled={normalizeRenderedContent}
+                  onToggle={() => setNormalizeRenderedContent((prev) => !prev)}
+                />
+                <span className="text-[11px] font-medium text-purple-700 bg-purple-100 px-2 py-1 rounded-full">
+                  {queriesRemaining}/4 queries left
+                </span>
+              </div>
             </div>
 
             {/* Chat messages */}
@@ -182,7 +190,7 @@ export function BothWrongScreen({
                     <p className="font-semibold mb-1 text-[11px]">
                       {msg.role === 'ai' ? '🤖 AI Tutor' : '👤 You'}
                     </p>
-                    <MathRenderer content={msg.content} className="text-[12px]" />
+                    <MathRenderer content={msg.content} className="text-[12px]" normalizeContent={normalizeRenderedContent} />
                   </div>
                 ))}
                 <div ref={chatEndRef} />
@@ -252,7 +260,7 @@ export function BothWrongScreen({
                   Your Answer ❌
                 </p>
                 <div className="p-3 bg-red-50 rounded-lg border border-red-200">
-                  <MathRenderer content={userAnswer || "(No answer provided)"} className="text-[13px] text-gray-800" />
+                  <MathRenderer content={userAnswer || "(No answer provided)"} className="text-[13px] text-gray-800" normalizeContent={normalizeRenderedContent} />
                 </div>
                 <p className="text-[10px] text-red-600 mt-1 italic">
                   This answer needs correction - check your calculations
@@ -264,7 +272,7 @@ export function BothWrongScreen({
                   Your Explanation ❌
                 </p>
                 <div className="p-3 bg-red-50 rounded-lg border border-red-200">
-                  <MathRenderer content={userExplanation || "(No explanation provided)"} className="text-[13px] text-gray-800" />
+                  <MathRenderer content={userExplanation || "(No explanation provided)"} className="text-[13px] text-gray-800" normalizeContent={normalizeRenderedContent} />
                 </div>
                 <p className="text-[10px] text-red-600 mt-1 italic">
                   Your reasoning needs improvement - review the hint below
@@ -279,7 +287,7 @@ export function BothWrongScreen({
               <Lightbulb size={18} className="text-yellow-600" />
               Hint to Help You
             </h3>
-            <MathRenderer content={hint} className="text-[13px] text-gray-700" />
+            <MathRenderer content={hint} className="text-[13px] text-gray-700" normalizeContent={normalizeRenderedContent} />
           </div>
 
           {/* Show Correct Answer After 3 Attempts */}
@@ -310,14 +318,14 @@ export function BothWrongScreen({
                     <p className="text-[11px] font-semibold text-green-800 uppercase tracking-wide mb-2">
                       ✅ Correct Answer
                     </p>
-                    <MathRenderer content={correctSolution.answer} className="text-[14px] text-gray-900 font-semibold" />
+                    <MathRenderer content={correctSolution.answer} className="text-[14px] text-gray-900 font-semibold" normalizeContent={normalizeRenderedContent} />
                   </div>
 
                   <div className="bg-white rounded-lg p-3 border border-green-200">
                     <p className="text-[11px] font-semibold text-green-800 uppercase tracking-wide mb-2">
                       📝 Correct Explanation
                     </p>
-                    <MathRenderer content={correctSolution.explanation} className="text-[13px] text-gray-800 leading-relaxed" />
+                    <MathRenderer content={correctSolution.explanation} className="text-[13px] text-gray-800 leading-relaxed" normalizeContent={normalizeRenderedContent} />
                   </div>
 
                   <div className="bg-green-100 rounded-lg p-3 border border-green-300">

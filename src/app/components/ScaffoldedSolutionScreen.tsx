@@ -1,6 +1,7 @@
 import { ArrowLeft, CheckCircle2, Edit3 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { MathRenderer } from './MathRenderer';
+import { RenderTextFormulaButton } from './RenderTextFormulaButton';
 import { ScreenNavigation } from './ScreenNavigation';
 
 interface ScaffoldedSolutionScreenProps {
@@ -29,6 +30,7 @@ export function ScaffoldedSolutionScreen({
   uploadedImageUrl,
 }: ScaffoldedSolutionScreenProps) {
   const [isQuestionConfirmed, setIsQuestionConfirmed] = useState(false);
+  const [normalizeRenderedContent, setNormalizeRenderedContent] = useState(false);
   const currentQuestionText = aiData?.extractedQuestion || userQuestion || '';
   const [correctionText, setCorrectionText] = useState(currentQuestionText);
 
@@ -70,6 +72,12 @@ export function ScaffoldedSolutionScreen({
       <div className="flex-1 overflow-y-auto px-6 py-6 pb-8">
         <div className="space-y-4">
           <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4">
+            <div className="mb-3 flex justify-end">
+              <RenderTextFormulaButton
+                enabled={normalizeRenderedContent}
+                onToggle={() => setNormalizeRenderedContent((prev) => !prev)}
+              />
+            </div>
             <h3 className="text-[15px] font-semibold text-blue-900 mb-2">Your Problem</h3>
 
             {uploadedImageUrl && (
@@ -98,7 +106,7 @@ export function ScaffoldedSolutionScreen({
             )}
 
             <div className="text-[13px] text-blue-800 mb-3">
-              {currentQuestionText ? <MathRenderer content={currentQuestionText} /> : 'No question provided'}
+              {currentQuestionText ? <MathRenderer content={currentQuestionText} normalizeContent={normalizeRenderedContent} /> : 'No question provided'}
             </div>
 
             {uploadedImageUrl && aiData?.extractedQuestion && (
@@ -160,7 +168,7 @@ export function ScaffoldedSolutionScreen({
                   <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-3">
                     <p className="text-[13px] text-blue-900 font-medium mb-1">Strategy</p>
                     <div className="text-[13px] text-gray-700">
-                      <MathRenderer content={aiData.strategy} />
+                      <MathRenderer content={aiData.strategy} normalizeContent={normalizeRenderedContent} />
                     </div>
                   </div>
                 )}
@@ -178,7 +186,7 @@ export function ScaffoldedSolutionScreen({
                           Step {index + 1}: {step.title}
                         </h4>
                         <div className="text-[13px] text-gray-600">
-                          <MathRenderer content={step.description} />
+                          <MathRenderer content={step.description} normalizeContent={normalizeRenderedContent} />
                         </div>
                       </div>
                     </div>
