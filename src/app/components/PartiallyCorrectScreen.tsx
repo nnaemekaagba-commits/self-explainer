@@ -2,7 +2,7 @@ import { ArrowLeft, CheckCircle, XCircle, Lightbulb, Send, MessageCircle } from 
 import { useState, useRef, useEffect } from 'react';
 import { askAIForHelp, generateStepSolution } from '../../services/aiService';
 import { MathRenderer } from './MathRenderer';
-import { RenderTextFormulaButton } from './RenderTextFormulaButton';
+import { RenderableMathBlock } from './RenderableMathBlock';
 
 interface ChatMessage {
   role: 'user' | 'ai';
@@ -52,7 +52,6 @@ export function PartiallyCorrectScreen({
   const [chatInput, setChatInput] = useState('');
   const [queriesRemaining, setQueriesRemaining] = useState(4);
   const [isAskingAI, setIsAskingAI] = useState(false);
-  const [normalizeRenderedContent, setNormalizeRenderedContent] = useState(false);
   const [correctSolution, setCorrectSolution] = useState<{answer: string; explanation: string} | null>(null);
   const [loadingSolution, setLoadingSolution] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
@@ -158,10 +157,6 @@ export function PartiallyCorrectScreen({
                 <p className="text-[13px] font-semibold text-purple-900">Ask AI for Help</p>
               </div>
               <div className="flex items-center gap-2">
-                <RenderTextFormulaButton
-                  enabled={normalizeRenderedContent}
-                  onToggle={() => setNormalizeRenderedContent((prev) => !prev)}
-                />
                 <span className="text-[11px] font-medium text-purple-700 bg-purple-100 px-2 py-1 rounded-full">
                   {queriesRemaining}/4 queries left
                 </span>
@@ -176,7 +171,11 @@ export function PartiallyCorrectScreen({
                     <p className="font-semibold mb-1 text-[11px]">
                       {msg.role === 'ai' ? '🤖 AI Tutor' : '👤 You'}
                     </p>
-                    <MathRenderer content={msg.content} className="text-[12px]" normalizeContent={normalizeRenderedContent} />
+                    {msg.role === 'ai' ? (
+                      <RenderableMathBlock content={msg.content} className="text-[12px]" />
+                    ) : (
+                      <MathRenderer content={msg.content} className="text-[12px]" />
+                    )}
                   </div>
                 ))}
                 <div ref={chatEndRef} />
@@ -260,7 +259,7 @@ export function PartiallyCorrectScreen({
                     ? 'bg-green-50 border-green-200' 
                     : 'bg-red-50 border-red-200'
                 }`}>
-                  <MathRenderer content={userAnswer || "(No answer provided)"} className="text-[13px] text-gray-800" normalizeContent={normalizeRenderedContent} />
+                  <MathRenderer content={userAnswer || "(No answer provided)"} className="text-[13px] text-gray-800" />
                 </div>
                 {answerCorrect ? (
                   <p className="text-[10px] text-green-600 mt-1 italic">
@@ -287,7 +286,7 @@ export function PartiallyCorrectScreen({
                     ? 'bg-green-50 border-green-200' 
                     : 'bg-red-50 border-red-200'
                 }`}>
-                  <MathRenderer content={userExplanation || "(No explanation provided)"} className="text-[13px] text-gray-800" normalizeContent={normalizeRenderedContent} />
+                  <MathRenderer content={userExplanation || "(No explanation provided)"} className="text-[13px] text-gray-800" />
                 </div>
                 {explanationCorrect ? (
                   <p className="text-[10px] text-green-600 mt-1 italic">
@@ -309,7 +308,7 @@ export function PartiallyCorrectScreen({
                 <Lightbulb size={18} className="text-yellow-600" />
                 Hint for Your Answer
               </h3>
-              <MathRenderer content={hint} className="text-[13px] text-gray-700" normalizeContent={normalizeRenderedContent} />
+              <RenderableMathBlock content={hint} className="text-[13px] text-gray-700" />
             </div>
           )}
 
@@ -372,14 +371,14 @@ export function PartiallyCorrectScreen({
                     <p className="text-[11px] font-semibold text-green-800 uppercase tracking-wide mb-2">
                       ✅ Correct Answer
                     </p>
-                    <MathRenderer content={correctSolution.answer} className="text-[14px] text-gray-900 font-semibold" normalizeContent={normalizeRenderedContent} />
+                    <RenderableMathBlock content={correctSolution.answer} className="text-[14px] text-gray-900 font-semibold" />
                   </div>
 
                   <div className="bg-white rounded-lg p-3 border border-green-200">
                     <p className="text-[11px] font-semibold text-green-800 uppercase tracking-wide mb-2">
                       📝 Correct Explanation
                     </p>
-                    <MathRenderer content={correctSolution.explanation} className="text-[13px] text-gray-800 leading-relaxed" normalizeContent={normalizeRenderedContent} />
+                    <RenderableMathBlock content={correctSolution.explanation} className="text-[13px] text-gray-800 leading-relaxed" />
                   </div>
 
                   <div className="bg-green-100 rounded-lg p-3 border border-green-300">

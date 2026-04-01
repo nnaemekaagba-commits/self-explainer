@@ -1,7 +1,7 @@
 import { ArrowLeft, CheckCircle2, Send, Lightbulb, Trophy, XCircle } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { MathRenderer } from './MathRenderer';
-import { RenderTextFormulaButton } from './RenderTextFormulaButton';
+import { RenderableMathBlock } from './RenderableMathBlock';
 import { ScreenNavigation } from './ScreenNavigation';
 import { generateSimilarQuestion, validatePracticeAnswer } from '../../services/aiService';
 import { createActivityLog, markActivityCompleted, recordStepAttempt } from '../../services/activityLogService';
@@ -53,7 +53,6 @@ export function IndependentPracticeScreen({
   const [allStepsCompleted, setAllStepsCompleted] = useState(false);
   const [showCelebration, setShowCelebration] = useState(false);
   const [practiceAttemptCount, setPracticeAttemptCount] = useState(1);
-  const [normalizeRenderedContent, setNormalizeRenderedContent] = useState(false);
   const [attemptCompleted, setAttemptCompleted] = useState(false);
   const [attemptPassed, setAttemptPassed] = useState(false);
   const [isReturningToGuided, setIsReturningToGuided] = useState(false);
@@ -334,13 +333,9 @@ export function IndependentPracticeScreen({
           <div className="bg-blue-50 border border-blue-200 rounded-2xl p-5">
             <div className="mb-3 flex items-center justify-between gap-3">
               <h3 className="text-[14px] font-semibold text-blue-900">Your Practice Problem:</h3>
-              <RenderTextFormulaButton
-                enabled={normalizeRenderedContent}
-                onToggle={() => setNormalizeRenderedContent((prev) => !prev)}
-              />
             </div>
             <div className="text-[14px] text-gray-800 leading-relaxed">
-              <MathRenderer content={practiceQuestion?.question || ''} normalizeContent={normalizeRenderedContent} />
+              <RenderableMathBlock content={practiceQuestion?.question || ''} />
             </div>
           </div>
 
@@ -399,7 +394,7 @@ export function IndependentPracticeScreen({
                           Step {step.stepNumber}: {step.title}
                         </h4>
                         <div className="text-[13px] text-gray-700 mb-3">
-                          <MathRenderer content={step.description} normalizeContent={normalizeRenderedContent} />
+                          <RenderableMathBlock content={step.description} />
                         </div>
 
                         {/* Answer input */}
@@ -479,14 +474,14 @@ export function IndependentPracticeScreen({
                                     status === 'correct' ? 'text-green-800' : 'text-red-800'
                                   }`}
                                 >
-                                  <MathRenderer content={stepResults[step.stepNumber].answerFeedback} normalizeContent={normalizeRenderedContent} />
+                                  <RenderableMathBlock content={stepResults[step.stepNumber].answerFeedback} />
                                 </div>
                                 <div
                                   className={`text-[13px] ${
                                     status === 'correct' ? 'text-green-800' : 'text-red-800'
                                   }`}
                                 >
-                                  <MathRenderer content={stepResults[step.stepNumber].explanationFeedback} normalizeContent={normalizeRenderedContent} />
+                                  <RenderableMathBlock content={stepResults[step.stepNumber].explanationFeedback} />
                                 </div>
                               </div>
                             </div>
@@ -495,7 +490,7 @@ export function IndependentPracticeScreen({
                             <div className="mt-3 pt-3 border-t border-gray-300">
                               <p className="text-[12px] font-medium text-gray-700 mb-1">Your answer:</p>
                               <div className="text-[13px] text-gray-800 bg-white p-2 rounded">
-                                <MathRenderer content={stepAnswers[step.stepNumber]} normalizeContent={normalizeRenderedContent} />
+                                <MathRenderer content={stepAnswers[step.stepNumber]} />
                               </div>
                             </div>
                             
@@ -504,7 +499,7 @@ export function IndependentPracticeScreen({
                               <div className="mt-2">
                                 <p className="text-[12px] font-medium text-gray-700 mb-1">Your explanation:</p>
                                 <div className="text-[13px] text-gray-800 bg-white p-2 rounded">
-                                  <MathRenderer content={stepExplanations[step.stepNumber]} normalizeContent={normalizeRenderedContent} />
+                                  <MathRenderer content={stepExplanations[step.stepNumber]} />
                                 </div>
                               </div>
                             )}

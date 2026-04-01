@@ -1,7 +1,6 @@
 import { ArrowLeft, CheckCircle2, ChevronDown, ChevronUp } from 'lucide-react';
 import { useState } from 'react';
-import { MathRenderer } from './MathRenderer';
-import { RenderTextFormulaButton } from './RenderTextFormulaButton';
+import { RenderableMathBlock } from './RenderableMathBlock';
 import { ScreenNavigation } from './ScreenNavigation';
 
 interface ScaffoldedSolutionScreenActiveProps {
@@ -16,7 +15,6 @@ interface ScaffoldedSolutionScreenActiveProps {
 
 export function ScaffoldedSolutionScreenActive({ onBack, onHomeClick, onArchiveClick, onInviteClick, onStartLearning, aiData, userQuestion }: ScaffoldedSolutionScreenActiveProps) {
   const [expandedSteps, setExpandedSteps] = useState<number[]>([]);
-  const [normalizeRenderedContent, setNormalizeRenderedContent] = useState(false);
 
   const toggleStep = (stepNumber: number) => {
     setExpandedSteps(prev =>
@@ -51,16 +49,10 @@ export function ScaffoldedSolutionScreenActive({ onBack, onHomeClick, onArchiveC
         <div className="space-y-4">
           {/* Problem Verification - Verified State */}
           <div className="bg-green-50 border border-green-200 rounded-2xl p-4">
-            <div className="mb-3 flex justify-end">
-              <RenderTextFormulaButton
-                enabled={normalizeRenderedContent}
-                onToggle={() => setNormalizeRenderedContent((prev) => !prev)}
-              />
-            </div>
             <h3 className="text-[15px] font-semibold text-green-900 mb-2">Problem Verified</h3>
             <div className="text-[13px] text-green-800 mb-2">
               {userQuestion ? (
-                <MathRenderer content={userQuestion} normalizeContent={normalizeRenderedContent} />
+                <RenderableMathBlock content={userQuestion} />
               ) : (
                 "The problem you've entered will appear here. This is a step-by-step breakdown to help you learn."
               )}
@@ -78,7 +70,7 @@ export function ScaffoldedSolutionScreenActive({ onBack, onHomeClick, onArchiveC
               <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-3">
                 <p className="text-[13px] text-blue-900 font-medium mb-1">Strategy</p>
                 <div className="text-[13px] text-gray-700">
-                  <MathRenderer content={aiData.strategy} normalizeContent={normalizeRenderedContent} />
+                  <RenderableMathBlock content={aiData.strategy} />
                 </div>
               </div>
             )}
@@ -99,7 +91,7 @@ export function ScaffoldedSolutionScreenActive({ onBack, onHomeClick, onArchiveC
                       Step {index + 1}: {step.title}
                     </h4>
                     <div className="text-[13px] text-gray-600">
-                      <MathRenderer content={step.description} normalizeContent={normalizeRenderedContent} />
+                      <RenderableMathBlock content={step.description} />
                     </div>
                   </div>
                   {expandedSteps.includes(index + 1) ? (
@@ -113,13 +105,13 @@ export function ScaffoldedSolutionScreenActive({ onBack, onHomeClick, onArchiveC
                     <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
                       <p className="text-[12px] text-blue-900 font-medium mb-2">Details</p>
                       <div className="text-[12px] text-blue-800">
-                        <MathRenderer content={step.description} normalizeContent={normalizeRenderedContent} />
+                        <RenderableMathBlock content={step.description} />
                       </div>
                       {step.hint && (
                         <div className="mt-2 p-2 bg-yellow-50 border border-yellow-300 rounded">
                           <p className="text-[11px] text-yellow-700 font-medium mb-1">Hint</p>
                           <div className="text-[12px] text-gray-700">
-                            <MathRenderer content={step.hint} normalizeContent={normalizeRenderedContent} />
+                            <RenderableMathBlock content={step.hint} />
                           </div>
                         </div>
                       )}
@@ -130,7 +122,7 @@ export function ScaffoldedSolutionScreenActive({ onBack, onHomeClick, onArchiveC
                             <span className="uppercase tracking-[0.22em]">Key Formula</span>
                           </p>
                           <div className="text-[23px] font-extrabold bg-white p-6 rounded-xl shadow-inner border-2 border-purple-300" style={{ fontWeight: 900 }}>
-                            <MathRenderer content={step.formula} normalizeContent={normalizeRenderedContent} />
+                            <RenderableMathBlock content={step.formula} />
                           </div>
                         </div>
                       )}

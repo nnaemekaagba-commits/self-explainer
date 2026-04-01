@@ -1,7 +1,7 @@
 import { ArrowLeft, Brain, Lightbulb, Loader2 } from 'lucide-react';
 import { useState } from 'react';
 import { ScreenNavigation } from './ScreenNavigation';
-import { MathRenderer } from './MathRenderer';
+import { RenderableMathBlock } from './RenderableMathBlock';
 
 interface ReflectionOnPreviousKnowledgeScreenProps {
   onBack: () => void;
@@ -80,7 +80,7 @@ export function ReflectionOnPreviousKnowledgeScreen({
             <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
               <p className="text-[12px] font-semibold uppercase tracking-[0.18em] text-slate-500 mb-2">Current Problem</p>
               <div className="text-[14px] text-slate-800">
-                <MathRenderer content={question} />
+                <RenderableMathBlock content={question} />
               </div>
             </div>
           ) : null}
@@ -92,7 +92,9 @@ export function ReflectionOnPreviousKnowledgeScreen({
               </div>
               <div>
                 <h3 className="text-[15px] font-semibold text-slate-900">Be reflective</h3>
-                <p className="text-[13px] leading-relaxed text-slate-700 mt-1">{priorKnowledgePrompt}</p>
+                <div className="text-[13px] leading-relaxed text-slate-700 mt-1">
+                  <RenderableMathBlock content={priorKnowledgePrompt} buttonClassName="justify-start" />
+                </div>
               </div>
             </div>
 
@@ -122,7 +124,9 @@ export function ReflectionOnPreviousKnowledgeScreen({
                 </div>
                 <div>
                   <h3 className="text-[15px] font-semibold text-slate-900">Be Inventive</h3>
-                  <p className="text-[13px] leading-relaxed text-slate-700 mt-1">{transferPrompt}</p>
+                  <div className="text-[13px] leading-relaxed text-slate-700 mt-1">
+                    <RenderableMathBlock content={transferPrompt} buttonClassName="justify-start" />
+                  </div>
                 </div>
               </div>
 

@@ -2,7 +2,7 @@ import { ArrowLeft, UserPlus, Archive, CheckCircle, XCircle, Lightbulb, RotateCc
 import { useState, useRef, useEffect } from 'react';
 import { askAIForHelp, generateDiagram } from '../../services/aiService';
 import { MathRenderer } from './MathRenderer';
-import { RenderTextFormulaButton } from './RenderTextFormulaButton';
+import { RenderableMathBlock } from './RenderableMathBlock';
 
 interface ChatMessage {
   role: 'user' | 'ai';
@@ -54,7 +54,6 @@ export const StepFeedbackScreen = ({
   const [chatInput, setChatInput] = useState('');
   const [queriesRemaining, setQueriesRemaining] = useState(4);
   const [isAskingAI, setIsAskingAI] = useState(false);
-  const [normalizeRenderedContent, setNormalizeRenderedContent] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
   
   const allCorrect = answerCorrect && explanationCorrect;
@@ -176,10 +175,6 @@ export const StepFeedbackScreen = ({
           <p className="text-[11px] font-semibold text-purple-900">
             Step {feedbackData?.stepNumber || 2}: {feedbackData?.hint || 'Plan your approach'}
           </p>
-          <RenderTextFormulaButton
-            enabled={normalizeRenderedContent}
-            onToggle={() => setNormalizeRenderedContent((prev) => !prev)}
-          />
         </div>
       </div>
 
@@ -236,7 +231,6 @@ export const StepFeedbackScreen = ({
             <MathRenderer 
               content={feedbackData.userAnswer} 
               className="text-[12px] font-semibold text-gray-900 mb-0.5"
-              normalizeContent={normalizeRenderedContent}
             />
           ) : feedbackData?.answerImageUrl ? (
             <div className="mt-1">
@@ -260,7 +254,7 @@ export const StepFeedbackScreen = ({
               }`}>
                 {answerCorrect ? 'Feedback' : 'Review'}
               </p>
-              <MathRenderer content={feedbackData.answerFeedback || feedbackData.feedback || ''} className="text-[10px] text-gray-700 leading-tight" normalizeContent={normalizeRenderedContent} />
+              <RenderableMathBlock content={feedbackData.answerFeedback || feedbackData.feedback || ''} className="text-[10px] text-gray-700 leading-tight" />
               {feedbackData.diagram && (
                 <div className="mt-2 border border-gray-200 rounded p-2 bg-gray-50">
                   <p className="text-[8px] text-gray-600 mb-1">Explanatory diagram: {feedbackData.diagram.concept}</p>
@@ -296,7 +290,7 @@ export const StepFeedbackScreen = ({
             </p>
           </div>
           {feedbackData?.userExplanation && feedbackData.userExplanation !== '[See uploaded image]' ? (
-            <MathRenderer content={feedbackData.userExplanation} className="text-[10px] text-gray-700 leading-tight mb-0.5" normalizeContent={normalizeRenderedContent} />
+            <MathRenderer content={feedbackData.userExplanation} className="text-[10px] text-gray-700 leading-tight mb-0.5" />
           ) : feedbackData?.explanationImageUrl ? (
             <div className="mt-1">
               <p className="text-[9px] text-gray-600 mb-1">Uploaded explanation:</p>
@@ -319,7 +313,7 @@ export const StepFeedbackScreen = ({
               }`}>
                 {explanationCorrect ? 'Feedback' : 'Review'}
               </p>
-              <MathRenderer content={feedbackData.explanationFeedback || feedbackData.feedback || ''} className="text-[10px] text-gray-700 leading-tight" normalizeContent={normalizeRenderedContent} />
+              <RenderableMathBlock content={feedbackData.explanationFeedback || feedbackData.feedback || ''} className="text-[10px] text-gray-700 leading-tight" />
               {feedbackData.diagram && (
                 <div className="mt-2 border border-gray-200 rounded p-2 bg-gray-50">
                   <p className="text-[8px] text-gray-600 mb-1">Explanatory diagram: {feedbackData.diagram.concept}</p>
@@ -360,7 +354,11 @@ export const StepFeedbackScreen = ({
                       <p className="font-semibold mb-0.5 text-[9px]">
                         {msg.role === 'ai' ? '🤖 AI Tutor' : '👤 You'}
                       </p>
-                      <MathRenderer content={msg.content} className="text-[10px]" normalizeContent={normalizeRenderedContent} />
+                      {msg.role === 'ai' ? (
+                        <RenderableMathBlock content={msg.content} className="text-[10px]" />
+                      ) : (
+                        <MathRenderer content={msg.content} className="text-[10px]" />
+                      )}
                       {msg.diagram && (
                         <div className="mt-2 border border-gray-200 rounded p-2 bg-white">
                           <p className="text-[8px] text-gray-600 mb-1">📊 Diagram: {msg.diagram.concept}</p>
@@ -458,7 +456,11 @@ export const StepFeedbackScreen = ({
                       <p className="font-semibold mb-0.5 text-[9px]">
                         {msg.role === 'ai' ? '🤖 AI Tutor' : '👤 You'}
                       </p>
-                      <MathRenderer content={msg.content} className="text-[10px]" normalizeContent={normalizeRenderedContent} />
+                      {msg.role === 'ai' ? (
+                        <RenderableMathBlock content={msg.content} className="text-[10px]" />
+                      ) : (
+                        <MathRenderer content={msg.content} className="text-[10px]" />
+                      )}
                       {msg.diagram && (
                         <div className="mt-2 border border-gray-200 rounded p-2 bg-white">
                           <p className="text-[8px] text-gray-600 mb-1">📊 Diagram: {msg.diagram.concept}</p>
