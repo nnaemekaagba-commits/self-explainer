@@ -1,6 +1,8 @@
 import { ArrowLeft, CheckCircle2, Edit3 } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { normalizePlainMathExpressionInText } from './MathRenderer';
 import { RenderableMathBlock } from './RenderableMathBlock';
+import { RenderTextFormulaButton } from './RenderTextFormulaButton';
 import { ScreenNavigation } from './ScreenNavigation';
 
 interface ScaffoldedSolutionScreenProps {
@@ -111,9 +113,15 @@ export function ScaffoldedSolutionScreen({
 
             <div className="space-y-3">
               <div>
-                <label className="block text-[12px] font-semibold text-blue-900 mb-2">
-                  Correction Field
-                </label>
+                <div className="mb-2 flex items-center justify-between gap-3">
+                  <label className="block text-[12px] font-semibold text-blue-900">
+                    Correction Field
+                  </label>
+                  <RenderTextFormulaButton
+                    enabled={false}
+                    onToggle={() => setCorrectionText((prev) => normalizePlainMathExpressionInText(prev))}
+                  />
+                </div>
                 <textarea
                   value={correctionText}
                   onChange={(event) => setCorrectionText(event.target.value)}

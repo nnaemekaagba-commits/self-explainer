@@ -7,7 +7,7 @@ interface MathRendererProps {
   normalizeContent?: boolean;
 }
 
-function normalizePlainMathExpressionInText(content: string): string {
+export function normalizePlainMathExpressionInText(content: string): string {
   return content
     .replace(/\\\((.*?)\\\)/gs, '$$$1$$')
     .replace(/\\\[(.*?)\\\]/gs, '$$$1$$')
