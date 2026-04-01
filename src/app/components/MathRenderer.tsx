@@ -7,6 +7,33 @@ interface MathRendererProps {
   normalizeContent?: boolean;
 }
 
+function decodeLatexEscapesForEditing(content: string): string {
+  return normalizeContent(content)
+    .replace(/\\\((.*?)\\\)/gs, '$1')
+    .replace(/\\\[(.*?)\\\]/gs, '$1')
+    .replace(/\\,/g, ' ')
+    .replace(/\\;/g, ' ')
+    .replace(/\\:/g, ' ')
+    .replace(/\\!/g, '')
+    .replace(/\\pi\b/g, 'pi')
+    .replace(/\\theta\b/g, 'theta')
+    .replace(/\\alpha\b/g, 'alpha')
+    .replace(/\\beta\b/g, 'beta')
+    .replace(/\\gamma\b/g, 'gamma')
+    .replace(/\\delta\b/g, 'delta')
+    .replace(/\\lambda\b/g, 'lambda')
+    .replace(/\\mu\b/g, 'mu')
+    .replace(/\\sigma\b/g, 'sigma')
+    .replace(/\\omega\b/g, 'omega')
+    .replace(/\\times\b/g, 'x')
+    .replace(/\\cdot\b/g, '*')
+    .replace(/\\frac\s*\{([^{}]+)\}\s*\{([^{}]+)\}/g, '($1)/($2)')
+    .replace(/\\sqrt\s*\{([^{}]+)\}/g, 'sqrt($1)')
+    .replace(/\\([A-Za-z]+)/g, '$1')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 export function normalizePlainMathExpressionInText(content: string): string {
   return normalizeContent(content)
     .replace(/\\\((.*?)\\\)/gs, '$$$1$$')
@@ -16,6 +43,15 @@ export function normalizePlainMathExpressionInText(content: string): string {
     .replace(/([A-Za-z])(?=\d)/g, '$1 ')
     .replace(/(?<=\d)([A-Za-z])/g, ' $1')
     .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
+export function normalizeEditableMathText(content: string): string {
+  return decodeLatexEscapesForEditing(content)
+    .replace(/([A-Za-z])(?=\d)/g, '$1 ')
+    .replace(/(?<=\d)([A-Za-z])/g, ' $1')
+    .replace(/\s+,/g, ',')
+    .replace(/\s+\./g, '.')
     .trim();
 }
 
@@ -276,6 +312,10 @@ function sanitizeLatexExpression(expression: string): string {
   sanitized = sanitized
     .replace(/\\\(([\s\S]*?)\\\)/g, '$1')
     .replace(/\\\[((?:[\s\S]*?))\\\]/g, '$1')
+    .replace(
+      /\\begin\{bmatrix\}\s*([\s\S]*?)\s*\\end\{bmatrix\}/g,
+      (_, body) => normalizeAugmentedMatrix(body),
+    )
     .replace(/\\p(?![a-zA-Z])/g, '\\pi')
     .replace(/\\\(/g, '')
     .replace(/\\\)/g, '')
@@ -310,6 +350,44 @@ function sanitizeLatexExpression(expression: string): string {
     .replace(/\u00b7/g, '\\cdot')
     .replace(/\s+/g, ' ')
     .trim();
+}
+
+function normalizeAugmentedMatrix(body: string): string {
+  const normalizedBody = body
+    .replace(/\r\n/g, '\n')
+    .replace(/\n/g, ' ')
+    .replace(/\s*\\\\\s*/g, ' @@ROW@@ ')
+    .replace(/\s+\\\s+/g, ' @@ROW@@ ')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+
+  const rawRows = normalizedBody
+    .split('@@ROW@@')
+    .map((row) => row.trim())
+    .filter(Boolean);
+
+  if (!rawRows.length) {
+    return `\\begin{bmatrix}${body}\\end{bmatrix}`;
+  }
+
+  const parsedRows = rawRows.map((row) =>
+    row
+      .split('&')
+      .map((cell) => cell.trim())
+      .filter(Boolean),
+  );
+
+  const barIndex = parsedRows[0].findIndex((cell) => cell === '|');
+  if (barIndex === -1) {
+    return `\\begin{bmatrix}${parsedRows.map((row) => row.join(' & ')).join(' \\\\ ')}\\end{bmatrix}`;
+  }
+
+  const leftCols = Math.max(barIndex, 1);
+  const rightCols = Math.max(parsedRows[0].length - barIndex - 1, 1);
+  const columnSpec = `${'c'.repeat(leftCols)}|${'c'.repeat(rightCols)}`;
+  const rebuiltRows = parsedRows.map((row) => row.filter((cell) => cell !== '|').join(' & ')).join(' \\\\ ');
+
+  return `\\left[\\begin{array}{${columnSpec}}${rebuiltRows}\\end{array}\\right]`;
 }
 
 function normalizePlainMathExpression(expression: string): string {

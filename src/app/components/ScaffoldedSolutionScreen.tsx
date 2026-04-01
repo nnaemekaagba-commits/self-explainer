@@ -1,6 +1,6 @@
 import { ArrowLeft, CheckCircle2, Edit3 } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { normalizePlainMathExpressionInText } from './MathRenderer';
+import { normalizeEditableMathText } from './MathRenderer';
 import { RenderableMathBlock } from './RenderableMathBlock';
 import { RenderTextFormulaButton } from './RenderTextFormulaButton';
 import { ScreenNavigation } from './ScreenNavigation';
@@ -119,7 +119,7 @@ export function ScaffoldedSolutionScreen({
                   </label>
                   <RenderTextFormulaButton
                     enabled={false}
-                    onToggle={() => setCorrectionText((prev) => normalizePlainMathExpressionInText(prev))}
+                    onToggle={() => setCorrectionText((prev) => normalizeEditableMathText(prev))}
                   />
                 </div>
                 <textarea
