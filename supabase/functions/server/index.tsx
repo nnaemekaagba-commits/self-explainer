@@ -407,20 +407,23 @@ Formula: ${step?.formula || ""}
 Requested visual guide:
 ${diagramDescription}
 
-Requirements:
-- Match the actual problem context exactly. Do not invent extra objects, forces, dimensions, supports, or geometry.
-- Use crisp lines, arrows, labels, dimensions, coordinate axes, and symbols only where they belong.
-- If it is statics or mechanics, prefer a free-body diagram or structural sketch.
-- If it is a circuit, use standard circuit symbols and label current/voltage directions clearly.
-- If it is geometry/algebra/calculus, show only the relevant graph, axes, shape, or labeled relationship.
-- This diagram is a visual hint, not a worked solution.
-- Do not show the final numerical answer, final solved equation, completed derivation, or any spoiler that finishes the problem for the student.
-- Do not perform the current step for the student. Show setup only, not the completed result of this step.
-- Do not substitute through to a solved value, simplify to the final expression, or annotate the figure with conclusion text.
-- If math labels are needed, keep them to givens, variables, and structural relationships only.
-- Keep the image uncluttered, legible, and professional.
-- Use black, gray, and subtle accent colors only.
-- No decorative background, no photorealism, no watermark, no cartoon style.`;
+  Requirements:
+  - Match the actual problem context exactly. Do not invent extra objects, forces, dimensions, supports, or geometry.
+  - Use crisp lines, arrows, labels, dimensions, coordinate axes, and symbols only where they belong.
+  - If it is statics or mechanics, prefer a free-body diagram or structural sketch.
+  - If it is a circuit, use standard circuit symbols and label current/voltage directions clearly.
+  - If it is geometry/algebra/calculus, show only the relevant graph, axes, shape, or labeled relationship.
+  - This diagram is a visual hint, not a worked solution.
+  - Do not show the final numerical answer, final solved equation, completed derivation, or any spoiler that finishes the problem for the student.
+  - Do not perform the current step for the student. Show setup only, not the completed result of this step.
+  - Do not substitute through to a solved value, simplify to the final expression, or annotate the figure with conclusion text.
+  - If math labels are needed, keep them to givens, variables, and structural relationships only.
+  - Do not place long titles, headings, sentences, or paragraph text inside the image.
+  - Avoid natural-language phrases such as "Augmented Matrix Representation" inside the image.
+  - Prefer symbols, matrix entries, axis labels, point names, and very short tags only.
+  - Keep the image uncluttered, legible, and professional.
+  - Use black, gray, and subtle accent colors only.
+  - No decorative background, no photorealism, no watermark, no cartoon style.`;
 }
 
 async function generateDiagramImage(prompt: string, geminiKey: string, size = "1024x1024", quality = "standard") {
@@ -435,12 +438,14 @@ async function generateDiagramImage(prompt: string, geminiKey: string, size = "1
     : "Prioritize a clean, lightweight educational diagram.";
   const geminiPrompt = `${prompt}
 
-Additional output requirements:
-- Return one polished educational diagram image
-- ${aspectRatioHint}
-- ${qualityHint}
-- Keep text labels readable and mathematically correct
-- No decorative flourishes or photorealistic textures`;
+  Additional output requirements:
+  - Return one polished educational diagram image
+  - ${aspectRatioHint}
+  - ${qualityHint}
+  - Keep text labels readable and mathematically correct
+  - Never include long headings, captions, or sentence-style text inside the image
+  - Use only minimal technical labels, symbols, givens, and variable names
+  - No decorative flourishes or photorealistic textures`;
 
   const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent`, {
     method: "POST",
@@ -2831,15 +2836,17 @@ ${buildDiagramContextSummary(diagramPrompt, diagramTopicInfo, diagramTraining)}
 Requested diagram:
 ${diagramPrompt}
 
-Requirements:
-- Stay faithful to the requested problem context.
-- Prefer textbook clarity over artistic style.
-- Show only the needed objects, labels, arrows, dimensions, and symbols.
-- This should function as a hint-level educational visual, not a full worked solution.
-- Do not include the final answer, solved expression, completed proof, or step-by-step derivation in the image.
-- Do not complete the requested step inside the image. The image should support thinking, not reveal the result.
-- If text appears in the image, keep it minimal and limited to givens, variable labels, and short structural cues.
-- No extra scenery, no decoration, no photorealism.`;
+  Requirements:
+  - Stay faithful to the requested problem context.
+  - Prefer textbook clarity over artistic style.
+  - Show only the needed objects, labels, arrows, dimensions, and symbols.
+  - This should function as a hint-level educational visual, not a full worked solution.
+  - Do not include the final answer, solved expression, completed proof, or step-by-step derivation in the image.
+  - Do not complete the requested step inside the image. The image should support thinking, not reveal the result.
+  - If text appears in the image, keep it minimal and limited to givens, variable labels, and short structural cues.
+  - Do not render titles, banners, headings, or long explanatory phrases inside the image.
+  - Never write sentence-length labels such as "Augmented Matrix Representation" inside the image.
+  - No extra scenery, no decoration, no photorealism.`;
 
     const result = await generateDiagramImage(enrichedDiagramPrompt, geminiKey, size, quality);
 
