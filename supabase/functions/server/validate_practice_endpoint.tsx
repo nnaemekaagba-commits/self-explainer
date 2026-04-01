@@ -59,6 +59,27 @@ function answersEquivalent(studentAnswer: string, expectedAnswer?: string): bool
   return false;
 }
 
+function answerLooksPlausibleForStep(studentAnswer: string, expectedAnswer = ""): boolean {
+  const core = extractAnswerCore(studentAnswer);
+  if (!core) return false;
+
+  const trimmed = core.trim();
+  const normalizedStudent = normalizeComparisonText(trimmed);
+  const normalizedExpected = normalizeComparisonText(expectedAnswer || "");
+
+  if (!normalizedStudent) return false;
+  if (/[0-9]/.test(normalizedStudent)) return true;
+  if (/[=+\-*/^]/.test(normalizedStudent)) return true;
+  if (/\\(frac|sqrt|pi|theta|alpha|beta|gamma|delta|lambda|mu|sigma|omega|sin|cos|tan|log|ln)/i.test(trimmed)) return true;
+  if (/^[a-z]\d+$/i.test(normalizedStudent)) return true;
+
+  if (/^[a-z]$/i.test(normalizedStudent)) {
+    return /^[a-z]$/i.test(normalizedExpected);
+  }
+
+  return normalizedStudent.length >= 2;
+}
+
 function explanationLooksReasonable(text: string): boolean {
   const normalized = (text || "").trim().toLowerCase();
   if (!normalized || normalized === "no explanation provided") return false;
@@ -114,6 +135,7 @@ Provide your response as JSON:
 For the ANSWER:
 - If CORRECT: Provide brief encouraging feedback
 - If INCORRECT: Explain what's wrong WITHOUT giving away the answer, suggest what to reconsider
+- Never mark a random stray letter or placeholder as correct unless the expected answer is actually that exact symbol
 
 For the EXPLANATION:
 - If provided and CORRECT: Acknowledge their reasoning
@@ -161,6 +183,11 @@ Use LaTeX notation for any math in the feedback.`;
       if (!result.answerFeedback || /wrong|incorrect|reconsider|check/i.test(result.answerFeedback)) {
         result.answerFeedback = `Your answer is mathematically equivalent to the expected result \\(${step.expectedAnswer}\\).`;
       }
+    }
+
+    if (result.answerCorrect && !answerLooksPlausibleForStep(userAnswer, step.expectedAnswer || "")) {
+      result.answerCorrect = false;
+      result.answerFeedback = "This answer is too vague to count as correct for this step. Enter the actual mathematical result or expression.";
     }
 
     if (userExplanation && explanationLooksReasonable(userExplanation) && result.explanationCorrect === false) {

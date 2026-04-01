@@ -280,6 +280,29 @@ function answersEquivalent(studentAnswer: string, referenceAnswer: string): bool
   return false;
 }
 
+function answerLooksPlausibleForStep(studentAnswer: string, referenceAnswer = ""): boolean {
+  const core = extractAnswerCore(studentAnswer);
+  if (!core) return false;
+
+  const trimmed = core.trim();
+  if (!trimmed || trimmed === "[See uploaded image]") return true;
+
+  const normalizedStudent = normalizeComparisonText(trimmed);
+  const normalizedReference = normalizeComparisonText(referenceAnswer || "");
+
+  if (!normalizedStudent) return false;
+  if (/[0-9]/.test(normalizedStudent)) return true;
+  if (/[=+\-*/^]/.test(normalizedStudent)) return true;
+  if (/\\(frac|sqrt|pi|theta|alpha|beta|gamma|delta|lambda|mu|sigma|omega|sin|cos|tan|log|ln)/i.test(trimmed)) return true;
+  if (/^[a-z]\d+$/i.test(normalizedStudent)) return true;
+
+  if (/^[a-z]$/i.test(normalizedStudent)) {
+    return /^[a-z]$/i.test(normalizedReference);
+  }
+
+  return normalizedStudent.length >= 2;
+}
+
 function explanationLooksReasonable(text: string): boolean {
   const normalized = (text || "").trim().toLowerCase();
   if (!normalized || normalized === "[see uploaded image]") return false;
@@ -1405,6 +1428,7 @@ For ANSWER validation:
 - Mark the answer correct when it is mathematically equivalent to the expected step result.
 - Accept equivalent forms such as fractions/decimals, rearranged equations, or the same intermediate result written differently.
 - Ignore formatting-only differences.
+- Never mark a random placeholder, stray single letter, or non-mathematical fragment as correct unless the expected answer is genuinely that exact symbol.
 - If the student uploaded an image, analyze it carefully before judging.
 
 For EXPLANATION validation:
@@ -1467,18 +1491,26 @@ Keep the tone supportive, specific, and fair.`;
           if (!adjustedAnswerCorrect && stepData?.formula && answersEquivalent(userAnswer || "", stepData.formula)) {
             adjustedAnswerCorrect = true;
           }
+          if (adjustedAnswerCorrect && !answerLooksPlausibleForStep(userAnswer || "", stepData?.formula || "")) {
+            adjustedAnswerCorrect = false;
+          }
 
           let adjustedExplanationCorrect = Boolean(parsed.explanationCorrect);
           if (!adjustedExplanationCorrect && explanationLooksReasonable(userExplanation || "")) {
             adjustedExplanationCorrect = true;
           }
 
+          const finalAnswerFeedback =
+            !adjustedAnswerCorrect && (userAnswer || "").trim() && !answerLooksPlausibleForStep(userAnswer || "", stepData?.formula || "")
+              ? "This answer is too vague to count as correct for this step. Enter the actual mathematical result or expression."
+              : answerFeedback;
+
           return c.json({
             answerCorrect: adjustedAnswerCorrect,
             explanationCorrect: adjustedExplanationCorrect,
-            answerFeedback,
+            answerFeedback: finalAnswerFeedback,
             explanationFeedback,
-            feedback: validateAndFixLatex(fixMissingSpaces(parsed.feedback || `${answerFeedback} ${explanationFeedback}`)),
+            feedback: validateAndFixLatex(fixMissingSpaces(parsed.feedback || `${finalAnswerFeedback} ${explanationFeedback}`)),
             diagram: feedbackDiagram
           });
         }
