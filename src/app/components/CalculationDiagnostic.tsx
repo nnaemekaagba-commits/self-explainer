@@ -34,7 +34,7 @@ export function CalculationDiagnostic() {
   };
 
   return (
-    <div className="fixed bottom-20 right-4 z-50 bg-white rounded-lg shadow-xl p-4 max-w-md border-2 border-blue-500">
+    <div className="fixed bottom-36 right-4 z-50 bg-white rounded-lg shadow-xl p-4 max-w-md border-2 border-blue-500">
       <div className="flex items-center justify-between mb-3">
         <h3 className="font-bold text-sm">🧪 Calculation Test</h3>
         <button
