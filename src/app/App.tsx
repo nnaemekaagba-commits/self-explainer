@@ -909,6 +909,9 @@ export default function App() {
                     const duration = ((Date.now() - startTime) / 1000).toFixed(1);
                     console.log(`✅ AI Response received in ${duration}s`);
                     console.log('📊 Steps count:', aiResponse?.steps?.length || 0);
+                    if (aiResponse?.extractedQuestion?.trim()) {
+                      setUserQuestion(aiResponse.extractedQuestion.trim());
+                    }
                     setAiData(aiResponse);
                     console.log('✅ AI data set in state');
                   } catch (error) {
@@ -1058,7 +1061,7 @@ export default function App() {
                       // Pass the full step data including correct answer for 3rd attempt
                       stepData: aiData?.steps?.[stepNum - 1],
                       // Pass original question for AI context
-                      originalQuestion: userQuestion
+                      originalQuestion: aiData?.extractedQuestion || userQuestion
                     });
                     
                     console.log(`Step ${stepNum} attempt ${newAttempts}/3`);
@@ -1077,7 +1080,7 @@ export default function App() {
                     }
                   }}
                   aiData={aiData}
-                  userQuestion={userQuestion}
+                  userQuestion={aiData?.extractedQuestion || userQuestion}
                   uploadedImageUrl={uploadedImageUrl}
                 />
                 <HomeIndicator />

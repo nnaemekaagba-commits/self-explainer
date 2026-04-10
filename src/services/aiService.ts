@@ -434,7 +434,15 @@ function getDemoSolution(question: string, imageUrl?: string): Promise<SolveProb
       // Simulate OCR/text extraction for images
       let extractedQuestion = cleanQuestion;
 
-      if (imageUrl && cleanQuestion.includes('analyze this image')) {
+      const isImageExtractionPrompt =
+        imageUrl &&
+        (
+          cleanQuestion.toLowerCase().includes('analyze this image') ||
+          cleanQuestion.toLowerCase().includes('read and extract') ||
+          cleanQuestion.toLowerCase().includes('extract the problem shown in this image')
+        );
+
+      if (isImageExtractionPrompt) {
         // Demo: simulate extracting text from image
         extractedQuestion = "Solve for x: 3x + 7 = 22\n\n(Fallback mode: the backend did not return a full AI solution, so a local guided solution was generated instead.)";
       } else if (cleanQuestion.includes('PDF document')) {
