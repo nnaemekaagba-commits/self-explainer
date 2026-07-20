@@ -2,6 +2,7 @@ import { ArrowLeft, Home, Archive, MessageSquare, FileText, Clock, Trash2, XCirc
 import { useState, useEffect } from 'react';
 import { getAllActivityLogs, ActivityLog, clearAllActivityLogs, deleteActivityLogs } from '../../services/activityLogService';
 import { MathRenderer } from './MathRenderer';
+import { formatAiEngagementMinutes } from '../../utils/aiEngagement';
 import * as XLSX from 'xlsx';
 
 interface StudentWorkScreenProps {
@@ -154,7 +155,7 @@ export function StudentWorkScreen({ onBack, onHomeClick }: StudentWorkScreenProp
             attempt.explanationCorrect ? '✓ Explanation' : '✗ Explanation',
             attempt.userAnswer || "(No answer provided)",
             attempt.userExplanation || "(No explanation provided)",
-            attempt.chatMessages ? attempt.chatMessages.map(msg => `${msg.role}: ${msg.content}`).join('\n') : '',
+            attempt.chatMessages ? attempt.chatMessages.map(msg => `${msg.role}${msg.role === 'ai' ? ` (viewed/engaged: ${formatAiEngagementMinutes(msg)})` : ''}: ${msg.content}`).join('\n') : '',
             attempt.aiQueriesUsed
           ]);
         });
@@ -473,10 +474,17 @@ export function StudentWorkScreen({ onBack, onHomeClick }: StudentWorkScreenProp
                                                           : 'bg-blue-50 border border-blue-200'
                                                       }`}
                                                     >
-                                                      <div className="flex items-center justify-between mb-1">
-                                                        <p className="font-semibold text-[10px]">
-                                                          {msg.role === 'ai' ? '🤖 AI Tutor' : '👤 Student'}
-                                                        </p>
+                                                      <div className="flex flex-wrap items-center justify-between gap-1 mb-1">
+                                                        <div className="flex flex-wrap items-center gap-1">
+                                                          <p className="font-semibold text-[10px]">
+                                                            {msg.role === 'ai' ? '🤖 AI Tutor' : '👤 Student'}
+                                                          </p>
+                                                          {msg.role === 'ai' && (
+                                                            <span className="text-[9px] font-semibold text-purple-700 bg-purple-100 border border-purple-200 px-1.5 py-0.5 rounded">
+                                                              Viewed/engaged: {formatAiEngagementMinutes(msg)}
+                                                            </span>
+                                                          )}
+                                                        </div>
                                                         <span className="text-[9px] text-gray-500">
                                                           {msg.timestamp ? formatTime(msg.timestamp) : ''}
                                                         </span>

@@ -6,6 +6,7 @@ import { MathRenderer } from './MathRenderer';
 import type { CoLearnerChatSession } from '../../services/colearnerChatService';
 import * as colearnerChatService from '../../services/colearnerChatService';
 import { copyToClipboard } from '../../utils/clipboard';
+import { formatAiEngagementMinutes } from '../../utils/aiEngagement';
 import * as XLSX from 'xlsx';
 
 interface ArchiveScreenProps {
@@ -830,9 +831,16 @@ export const ArchiveScreen = ({ onBack, onHomeClick, onInviteClick, onStudentWor
                                                     : 'bg-white border border-gray-200'
                                                 }`}
                                               >
-                                                <p className="font-semibold mb-0.5 text-[8px]">
-                                                  {msg.role === 'user' ? '👤 Student Query:' : '🤖 AI Response:'}
-                                                </p>
+                                                <div className="flex flex-wrap items-center gap-1 mb-0.5">
+                                                  <span className="font-semibold text-[8px]">
+                                                    {msg.role === 'user' ? '👤 Student Query:' : '🤖 AI Response:'}
+                                                  </span>
+                                                  {msg.role === 'ai' && (
+                                                    <span className="text-[8px] font-semibold text-purple-800 bg-purple-100 border border-purple-200 px-1 py-0.5 rounded">
+                                                      Viewed/engaged: {formatAiEngagementMinutes(msg)}
+                                                    </span>
+                                                  )}
+                                                </div>
                                                 <div className="text-[9px] text-gray-800">
                                                   <MathRenderer content={msg.content} />
                                                 </div>

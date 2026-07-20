@@ -42,7 +42,11 @@ async function fetchActivityLogs(includeSessionId: boolean): Promise<ActivityLog
 export interface ChatMessage {
   role: 'user' | 'ai';
   content: string;
-  timestamp: string;
+  timestamp?: string;
+  engagementStartedAt?: string;
+  engagementEndedAt?: string;
+  engagementMs?: number;
+  engagementMinutes?: number;
 }
 
 export interface StepAttempt {

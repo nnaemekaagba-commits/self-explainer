@@ -33,6 +33,7 @@ export function ScaffoldedSolutionScreen({
   const [isQuestionConfirmed, setIsQuestionConfirmed] = useState(false);
   const currentQuestionText = aiData?.extractedQuestion || userQuestion || '';
   const [correctionText, setCorrectionText] = useState('');
+  const [isCorrectionRendered, setIsCorrectionRendered] = useState(false);
 
   const handleMarkAsCorrect = () => {
     setIsQuestionConfirmed(true);
@@ -45,6 +46,17 @@ export function ScaffoldedSolutionScreen({
 
     setIsQuestionConfirmed(false);
     onSubmitCorrection?.(trimmedCorrection);
+  };
+
+  const handleRenderCorrectionText = () => {
+    const sourceText = correctionText.trim() || currentQuestionText;
+    if (!sourceText.trim()) {
+      return;
+    }
+
+    const normalizedText = normalizeEditableMathText(sourceText);
+    setCorrectionText(normalizedText);
+    setIsCorrectionRendered(normalizedText.length > 0);
   };
 
   return (
@@ -114,18 +126,21 @@ export function ScaffoldedSolutionScreen({
                     Correction Field
                   </label>
                   <RenderTextFormulaButton
-                    enabled={false}
-                    onToggle={() => setCorrectionText((prev) => normalizeEditableMathText(prev))}
+                    enabled={isCorrectionRendered}
+                    onToggle={handleRenderCorrectionText}
                   />
                 </div>
                 <textarea
                   value={correctionText}
-                  onChange={(event) => setCorrectionText(event.target.value)}
+                  onChange={(event) => {
+                    setCorrectionText(event.target.value);
+                    setIsCorrectionRendered(false);
+                  }}
                   placeholder="Type any corrections to the problem here."
                   className="w-full min-h-[110px] rounded-xl border border-blue-300 bg-white px-4 py-3 text-[13px] text-gray-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
                 <p className="mt-2 text-[11px] text-blue-700">
-                  Edit the problem here, then update it so the system regenerates the strategy from your correction.
+                  Use the render button to pull in the current problem text and clean up formulas, then edit anything else before updating.
                 </p>
               </div>
 

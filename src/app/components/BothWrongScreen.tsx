@@ -3,10 +3,16 @@ import { useState, useRef, useEffect } from 'react';
 import { askAIForHelp, generateStepSolution } from '../../services/aiService';
 import { MathRenderer } from './MathRenderer';
 import { RenderableMathBlock } from './RenderableMathBlock';
+import { appendUserChatMessage, createAiChatMessage, snapshotAiEngagement } from '../../utils/aiEngagement';
 
 interface ChatMessage {
   role: 'user' | 'ai';
   content: string;
+  timestamp?: string;
+  engagementStartedAt?: string;
+  engagementEndedAt?: string;
+  engagementMs?: number;
+  engagementMinutes?: number;
 }
 
 interface BothWrongScreenProps {
@@ -100,7 +106,7 @@ export function BothWrongScreen({
   useEffect(() => {
     console.log('💬 BothWrongScreen: Chat messages updated, notifying parent:', chatMessages);
     if (onChatMessagesChange) {
-      onChatMessagesChange(chatMessages);
+      onChatMessagesChange(snapshotAiEngagement(chatMessages));
     }
   }, [chatMessages, onChatMessagesChange]);
 
@@ -111,7 +117,7 @@ export function BothWrongScreen({
     setChatInput('');
     
     // Add user message to chat
-    setChatMessages(prev => [...prev, { role: 'user', content: userMessage }]);
+    setChatMessages(prev => appendUserChatMessage(prev, userMessage));
     
     // Decrement queries
     setQueriesRemaining(prev => prev - 1);
@@ -132,17 +138,14 @@ export function BothWrongScreen({
         stepData: stepData,  // Pass full step context with formula and diagram
         answerImageUrl: answerImageUrl,  // Pass answer image if exists
         explanationImageUrl: explanationImageUrl,  // Pass explanation image if exists
-        previousMessages: chatMessages  // Pass conversation history
+        previousMessages: snapshotAiEngagement(chatMessages)  // Pass conversation history
       });
       
       // Add AI response to chat
-      setChatMessages(prev => [...prev, { role: 'ai', content: aiResponse }]);
+      setChatMessages(prev => [...prev, createAiChatMessage(aiResponse)]);
     } catch (error) {
       console.error('Error asking AI:', error);
-      setChatMessages(prev => [...prev, { 
-        role: 'ai', 
-        content: 'Sorry, I encountered an error. Please try again.' 
-      }]);
+      setChatMessages(prev => [...prev, createAiChatMessage('Sorry, I encountered an error. Please try again.')]);
     } finally {
       setIsAskingAI(false);
     }

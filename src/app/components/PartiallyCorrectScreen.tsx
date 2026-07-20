@@ -3,10 +3,16 @@ import { useState, useRef, useEffect } from 'react';
 import { askAIForHelp, generateStepSolution } from '../../services/aiService';
 import { MathRenderer } from './MathRenderer';
 import { RenderableMathBlock } from './RenderableMathBlock';
+import { appendUserChatMessage, createAiChatMessage, snapshotAiEngagement } from '../../utils/aiEngagement';
 
 interface ChatMessage {
   role: 'user' | 'ai';
   content: string;
+  timestamp?: string;
+  engagementStartedAt?: string;
+  engagementEndedAt?: string;
+  engagementMs?: number;
+  engagementMinutes?: number;
 }
 
 interface PartiallyCorrectScreenProps {
@@ -91,7 +97,7 @@ export function PartiallyCorrectScreen({
   useEffect(() => {
     console.log('💬 PartiallyCorrectScreen: Chat messages updated, notifying parent:', chatMessages);
     if (onChatMessagesChange) {
-      onChatMessagesChange(chatMessages);
+      onChatMessagesChange(snapshotAiEngagement(chatMessages));
     }
   }, [chatMessages, onChatMessagesChange]);
 
@@ -102,7 +108,7 @@ export function PartiallyCorrectScreen({
     setChatInput('');
     
     // Add user message to chat
-    setChatMessages(prev => [...prev, { role: 'user', content: userMessage }]);
+    setChatMessages(prev => appendUserChatMessage(prev, userMessage));
     
     // Decrement queries
     setQueriesRemaining(prev => prev - 1);
@@ -122,13 +128,10 @@ export function PartiallyCorrectScreen({
       });
       
       // Add AI response to chat
-      setChatMessages(prev => [...prev, { role: 'ai', content: aiResponse }]);
+      setChatMessages(prev => [...prev, createAiChatMessage(aiResponse)]);
     } catch (error) {
       console.error('Error asking AI:', error);
-      setChatMessages(prev => [...prev, { 
-        role: 'ai', 
-        content: 'Sorry, I encountered an error. Please try again.' 
-      }]);
+      setChatMessages(prev => [...prev, createAiChatMessage('Sorry, I encountered an error. Please try again.')]);
     } finally {
       setIsAskingAI(false);
     }

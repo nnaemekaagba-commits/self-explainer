@@ -3,11 +3,17 @@ import { useState, useRef, useEffect } from 'react';
 import { askAIForHelp, generateDiagram } from '../../services/aiService';
 import { MathRenderer } from './MathRenderer';
 import { RenderableMathBlock } from './RenderableMathBlock';
+import { appendUserChatMessage, createAiChatMessage, snapshotAiEngagement } from '../../utils/aiEngagement';
 
 interface ChatMessage {
   role: 'user' | 'ai';
   content: string;
   diagram?: { svg?: string; imageUrl?: string; concept: string };
+  timestamp?: string;
+  engagementStartedAt?: string;
+  engagementEndedAt?: string;
+  engagementMs?: number;
+  engagementMinutes?: number;
 }
 
 interface StepFeedbackScreenProps {
@@ -66,7 +72,7 @@ export const StepFeedbackScreen = ({
 
   useEffect(() => {
     if (onChatMessagesChange) {
-      onChatMessagesChange(chatMessages);
+      onChatMessagesChange(snapshotAiEngagement(chatMessages));
     }
   }, [chatMessages, onChatMessagesChange]);
 
@@ -76,7 +82,7 @@ export const StepFeedbackScreen = ({
     const userMessage = chatInput.trim();
     setChatInput('');
     
-    setChatMessages(prev => [...prev, { role: 'user', content: userMessage }]);
+    setChatMessages(prev => appendUserChatMessage(prev, userMessage));
     
     setQueriesRemaining(prev => prev - 1);
     if (onAIQueryUsed) onAIQueryUsed();
@@ -105,17 +111,13 @@ export const StepFeedbackScreen = ({
         }
       }
       
-      setChatMessages(prev => [...prev, { 
-        role: 'ai', 
-        content: aiResponse,
+      setChatMessages(prev => [...prev, {
+        ...createAiChatMessage(aiResponse),
         diagram: diagramData
       }]);
     } catch (error) {
       console.error('Error asking AI:', error);
-      setChatMessages(prev => [...prev, { 
-        role: 'ai', 
-        content: 'Sorry, I encountered an error. Please try again.' 
-      }]);
+      setChatMessages(prev => [...prev, createAiChatMessage('Sorry, I encountered an error. Please try again.')]);
     } finally {
       setIsAskingAI(false);
     }

@@ -33,6 +33,7 @@ import { LowFidelityGuidedScreen } from './components/LowFidelityGuidedScreen';
 import { LowFidelityArchiveScreen } from './components/LowFidelityArchiveScreen';
 import { LowFidelityInviteScreen } from './components/LowFidelityInviteScreen';
 import { LowFidelityCoLearnScreen } from './components/LowFidelityCoLearnScreen';
+import { snapshotAiEngagement } from '../utils/aiEngagement';
 import { LowFidelityFeedbackScreen } from './components/LowFidelityFeedbackScreen';
 import { LoginScreen } from './components/LoginScreen';
 import { SignUpScreen } from './components/SignUpScreen';
@@ -1018,7 +1019,7 @@ export default function App() {
                     // Record step attempt in activity log with chat messages AND image URLs
                     if (currentActivityLogId) {
                       // Add timestamps to chat messages
-                      const timestampedMessages = (chatMessages || []).map(msg => ({
+                      const timestampedMessages = snapshotAiEngagement(chatMessages || []).map(msg => ({
                         ...msg,
                         timestamp: new Date().toISOString()
                       }));
@@ -1209,7 +1210,7 @@ export default function App() {
                     
                     // Update the last attempt with chat messages from feedback screen
                     if (chatMessages && chatMessages.length > 0 && currentActivityLogId && feedbackData?.stepNumber) {
-                      const timestampedMessages = chatMessages.map(msg => ({
+                      const timestampedMessages = snapshotAiEngagement(chatMessages).map(msg => ({
                         ...msg,
                         timestamp: new Date().toISOString()
                       }));
@@ -1261,7 +1262,7 @@ export default function App() {
                   onTryAgain={(chatMessages) => {
                     // Update the last attempt with chat messages from feedback screen
                     if (chatMessages && chatMessages.length > 0 && currentActivityLogId && feedbackData?.stepNumber) {
-                      const timestampedMessages = chatMessages.map(msg => ({
+                      const timestampedMessages = snapshotAiEngagement(chatMessages).map(msg => ({
                         ...msg,
                         timestamp: new Date().toISOString()
                       }));
