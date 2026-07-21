@@ -1,6 +1,6 @@
 import { ArrowLeft, Home, Archive, MessageSquare, FileText, Clock, Trash2, XCircle, Download } from 'lucide-react';
 import { useState, useEffect } from 'react';
-import { getAllActivityLogs, ActivityLog, clearAllActivityLogs, deleteActivityLogs } from '../../services/activityLogService';
+import { getAllActivityLogs, ActivityLog, ChatMessage, clearAllActivityLogs, deleteActivityLogs } from '../../services/activityLogService';
 import { MathRenderer } from './MathRenderer';
 import { formatAiEngagementMinutes } from '../../utils/aiEngagement';
 import * as XLSX from 'xlsx';
@@ -22,6 +22,24 @@ export function StudentWorkScreen({ onBack, onHomeClick }: StudentWorkScreenProp
   const [selectionMode, setSelectionMode] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
+
+  const formatChatMessagesForExport = (messages: ChatMessage[] = []) => {
+    return messages.map((msg, msgIndex) => {
+      if (msg.role === 'ai') {
+        const responseNumber = messages
+          .slice(0, msgIndex + 1)
+          .filter((message) => message.role === 'ai').length;
+
+        return [
+          `AI Response ${responseNumber}`,
+          `AI response viewed/engaged duration: ${formatAiEngagementMinutes(msg)}`,
+          msg.content,
+        ].join('\n');
+      }
+
+      return ['User Query', msg.content].join('\n');
+    }).join('\n\n');
+  };
 
   useEffect(() => {
     loadActivityLogs();
@@ -155,7 +173,7 @@ export function StudentWorkScreen({ onBack, onHomeClick }: StudentWorkScreenProp
             attempt.explanationCorrect ? '✓ Explanation' : '✗ Explanation',
             attempt.userAnswer || "(No answer provided)",
             attempt.userExplanation || "(No explanation provided)",
-            attempt.chatMessages ? attempt.chatMessages.map(msg => `${msg.role}${msg.role === 'ai' ? ` (viewed/engaged: ${formatAiEngagementMinutes(msg)})` : ''}: ${msg.content}`).join('\n') : '',
+            formatChatMessagesForExport(attempt.chatMessages),
             attempt.aiQueriesUsed
           ]);
         });
@@ -481,7 +499,7 @@ export function StudentWorkScreen({ onBack, onHomeClick }: StudentWorkScreenProp
                                                           </p>
                                                           {msg.role === 'ai' && (
                                                             <span className="text-[9px] font-semibold text-purple-700 bg-purple-100 border border-purple-200 px-1.5 py-0.5 rounded">
-                                                              Viewed/engaged: {formatAiEngagementMinutes(msg)}
+                                                              Duration: {formatAiEngagementMinutes(msg)}
                                                             </span>
                                                           )}
                                                         </div>
@@ -489,6 +507,11 @@ export function StudentWorkScreen({ onBack, onHomeClick }: StudentWorkScreenProp
                                                           {msg.timestamp ? formatTime(msg.timestamp) : ''}
                                                         </span>
                                                       </div>
+                                                      {msg.role === 'ai' && (
+                                                        <div className="mb-1 rounded border border-purple-200 bg-purple-100 px-1.5 py-1 text-[9px] font-semibold text-purple-800">
+                                                          AI response viewed/engaged duration: {formatAiEngagementMinutes(msg)}
+                                                        </div>
+                                                      )}
                                                       <MathRenderer 
                                                         content={msg.content} 
                                                         className="text-[11px] text-gray-700"

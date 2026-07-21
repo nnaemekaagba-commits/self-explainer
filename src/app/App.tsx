@@ -1,8 +1,9 @@
 import { createActivityLog, recordStepAttempt, recordAIQuery, updateLastAttemptChatMessages } from '../services/activityLogService';
+import type { ChatMessage } from '../services/activityLogService';
 import { DiagnosticPanel } from './components/DiagnosticPanel';
 import { APIStatusIndicator } from './components/APIStatusIndicator';
 import { CalculationDiagnostic } from './components/CalculationDiagnostic';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { StatusBar } from './components/StatusBar';
 import { TopActions } from './components/TopActions';
 import { MessageInput } from './components/MessageInput';
@@ -33,7 +34,7 @@ import { LowFidelityGuidedScreen } from './components/LowFidelityGuidedScreen';
 import { LowFidelityArchiveScreen } from './components/LowFidelityArchiveScreen';
 import { LowFidelityInviteScreen } from './components/LowFidelityInviteScreen';
 import { LowFidelityCoLearnScreen } from './components/LowFidelityCoLearnScreen';
-import { snapshotAiEngagement } from '../utils/aiEngagement';
+import { finalizeAiEngagement, hasActiveAiEngagement, snapshotAiEngagement } from '../utils/aiEngagement';
 import { LowFidelityFeedbackScreen } from './components/LowFidelityFeedbackScreen';
 import { LoginScreen } from './components/LoginScreen';
 import { SignUpScreen } from './components/SignUpScreen';
@@ -214,7 +215,8 @@ export default function App() {
   const [currentLearningThreadId, setCurrentLearningThreadId] = useState<string | null>(null);
   const [currentStepAIQueries, setCurrentStepAIQueries] = useState<number>(0);
   const [stepAttempts, setStepAttempts] = useState<Record<number, number>>({});
-  const [currentStepChatMessages, setCurrentStepChatMessages] = useState<Array<{role: 'user' | 'ai', content: string}>>([]);
+  const [currentStepChatMessages, setCurrentStepChatMessages] = useState<ChatMessage[]>([]);
+  const currentStepChatMessagesRef = useRef<ChatMessage[]>([]);
   // State to preserve user input when navigating back from feedback
   const [savedStepAnswers, setSavedStepAnswers] = useState<Record<number, string>>({});
   const [savedStepExplanations, setSavedStepExplanations] = useState<Record<number, string>>({});
@@ -245,6 +247,38 @@ export default function App() {
     buttonBorderColor: 'gray-300',
     inputBgColor: '#ffffff',
   });
+
+  useEffect(() => {
+    currentStepChatMessagesRef.current = currentStepChatMessages;
+  }, [currentStepChatMessages]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof document === 'undefined') return;
+
+    const publishCurrentStepEngagement = () => {
+      const messages = currentStepChatMessagesRef.current;
+      if (!hasActiveAiEngagement(messages)) return;
+
+      const snapshot = snapshotAiEngagement(messages);
+      currentStepChatMessagesRef.current = snapshot;
+      setCurrentStepChatMessages(snapshot);
+    };
+
+    const intervalId = window.setInterval(publishCurrentStepEngagement, 5000);
+    const publishOnVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') publishCurrentStepEngagement();
+    };
+
+    document.addEventListener('visibilitychange', publishOnVisibilityChange);
+    window.addEventListener('beforeunload', publishCurrentStepEngagement);
+
+    return () => {
+      window.clearInterval(intervalId);
+      document.removeEventListener('visibilitychange', publishOnVisibilityChange);
+      window.removeEventListener('beforeunload', publishCurrentStepEngagement);
+      publishCurrentStepEngagement();
+    };
+  }, []);
 
   const isAuthGateScreen = ['login', 'signup', 'forgot-password', 'reset-password'].includes(currentScreen);
 
@@ -1018,11 +1052,17 @@ export default function App() {
                   onStepAttempt={(stepNumber, userAnswer, userExplanation, answerCorrect, explanationCorrect, chatMessages, answerImageUrl, explanationImageUrl) => {
                     // Record step attempt in activity log with chat messages AND image URLs
                     if (currentActivityLogId) {
+                      const sourceMessages =
+                        currentStepChatMessagesRef.current.length > 0
+                          ? currentStepChatMessagesRef.current
+                          : (chatMessages || []);
                       // Add timestamps to chat messages
-                      const timestampedMessages = snapshotAiEngagement(chatMessages || []).map(msg => ({
+                      const timestampedMessages = finalizeAiEngagement(sourceMessages || []).map(msg => ({
                         ...msg,
-                        timestamp: new Date().toISOString()
+                        timestamp: msg.timestamp || new Date().toISOString()
                       }));
+                      currentStepChatMessagesRef.current = timestampedMessages;
+                      setCurrentStepChatMessages(timestampedMessages);
                       
                       recordStepAttempt(
                         currentActivityLogId,
@@ -1041,6 +1081,7 @@ export default function App() {
                     }
                     
                     // Reset chat messages and AI queries for next attempt
+                    currentStepChatMessagesRef.current = [];
                     setCurrentStepChatMessages([]);
                     setCurrentStepAIQueries(0);
                   }}
@@ -1162,7 +1203,9 @@ export default function App() {
                     console.log('AI query used, total:', currentStepAIQueries + 1);
                   }}
                   onChatMessagesChange={(messages) => {
-                    setCurrentStepChatMessages(messages);
+                    const snapshot = snapshotAiEngagement(messages || []);
+                    currentStepChatMessagesRef.current = snapshot;
+                    setCurrentStepChatMessages(snapshot);
                   }}
                 />
                 <HomeIndicator />
@@ -1190,7 +1233,9 @@ export default function App() {
                     console.log('AI query used, total:', currentStepAIQueries + 1);
                   }}
                   onChatMessagesChange={(messages) => {
-                    setCurrentStepChatMessages(messages);
+                    const snapshot = snapshotAiEngagement(messages || []);
+                    currentStepChatMessagesRef.current = snapshot;
+                    setCurrentStepChatMessages(snapshot);
                   }}
                 />
                 <HomeIndicator />
@@ -1209,11 +1254,18 @@ export default function App() {
                     console.log('🔍 Feedback step number:', feedbackData?.stepNumber);
                     
                     // Update the last attempt with chat messages from feedback screen
-                    if (chatMessages && chatMessages.length > 0 && currentActivityLogId && feedbackData?.stepNumber) {
-                      const timestampedMessages = snapshotAiEngagement(chatMessages).map(msg => ({
+                    const sourceMessages =
+                      currentStepChatMessagesRef.current.length > 0
+                        ? currentStepChatMessagesRef.current
+                        : (chatMessages || []);
+
+                    if (sourceMessages.length > 0 && currentActivityLogId && feedbackData?.stepNumber) {
+                      const timestampedMessages = finalizeAiEngagement(sourceMessages).map(msg => ({
                         ...msg,
-                        timestamp: new Date().toISOString()
+                        timestamp: msg.timestamp || new Date().toISOString()
                       }));
+                      currentStepChatMessagesRef.current = timestampedMessages;
+                      setCurrentStepChatMessages(timestampedMessages);
                       console.log('📝 Updating last attempt with', timestampedMessages.length, 'messages for step', feedbackData.stepNumber);
                       console.log('📝 Messages to send:', JSON.stringify(timestampedMessages, null, 2));
                       updateLastAttemptChatMessages(
@@ -1244,7 +1296,9 @@ export default function App() {
                   }}
                   onChatMessagesChange={(messages) => {
                     console.log('💬 App.tsx: Received chat messages update from BothWrongScreen:', messages);
-                    setCurrentStepChatMessages(messages);
+                    const snapshot = snapshotAiEngagement(messages || []);
+                    currentStepChatMessagesRef.current = snapshot;
+                    setCurrentStepChatMessages(snapshot);
                   }}
                   attemptCount={feedbackData?.attemptCount}
                   stepData={feedbackData?.stepData}
@@ -1261,11 +1315,18 @@ export default function App() {
                   onBack={() => setCurrentScreen('home')}
                   onTryAgain={(chatMessages) => {
                     // Update the last attempt with chat messages from feedback screen
-                    if (chatMessages && chatMessages.length > 0 && currentActivityLogId && feedbackData?.stepNumber) {
-                      const timestampedMessages = snapshotAiEngagement(chatMessages).map(msg => ({
+                    const sourceMessages =
+                      currentStepChatMessagesRef.current.length > 0
+                        ? currentStepChatMessagesRef.current
+                        : (chatMessages || []);
+
+                    if (sourceMessages.length > 0 && currentActivityLogId && feedbackData?.stepNumber) {
+                      const timestampedMessages = finalizeAiEngagement(sourceMessages).map(msg => ({
                         ...msg,
-                        timestamp: new Date().toISOString()
+                        timestamp: msg.timestamp || new Date().toISOString()
                       }));
+                      currentStepChatMessagesRef.current = timestampedMessages;
+                      setCurrentStepChatMessages(timestampedMessages);
                       updateLastAttemptChatMessages(
                         currentActivityLogId,
                         feedbackData.stepNumber,
@@ -1296,7 +1357,9 @@ export default function App() {
                   }}
                   onChatMessagesChange={(messages) => {
                     console.log('💬 App.tsx: Received chat messages update from PartiallyCorrectScreen:', messages);
-                    setCurrentStepChatMessages(messages);
+                    const snapshot = snapshotAiEngagement(messages || []);
+                    currentStepChatMessagesRef.current = snapshot;
+                    setCurrentStepChatMessages(snapshot);
                   }}
                 />
                 <HomeIndicator />

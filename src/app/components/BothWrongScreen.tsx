@@ -3,7 +3,7 @@ import { useState, useRef, useEffect } from 'react';
 import { askAIForHelp, generateStepSolution } from '../../services/aiService';
 import { MathRenderer } from './MathRenderer';
 import { RenderableMathBlock } from './RenderableMathBlock';
-import { appendUserChatMessage, createAiChatMessage, snapshotAiEngagement } from '../../utils/aiEngagement';
+import { appendUserChatMessage, createAiChatMessage, hasActiveAiEngagement, snapshotAiEngagement } from '../../utils/aiEngagement';
 
 interface ChatMessage {
   role: 'user' | 'ai';
@@ -64,6 +64,7 @@ export function BothWrongScreen({
   const [correctSolution, setCorrectSolution] = useState<{answer: string; explanation: string} | null>(null);
   const [loadingSolution, setLoadingSolution] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
+  const chatMessagesRef = useRef<ChatMessage[]>([]);
 
   console.log('🎬 BothWrongScreen rendered with props:', {
     stepNumber,
@@ -105,10 +106,45 @@ export function BothWrongScreen({
   // Notify parent when chat messages change
   useEffect(() => {
     console.log('💬 BothWrongScreen: Chat messages updated, notifying parent:', chatMessages);
+    chatMessagesRef.current = chatMessages;
     if (onChatMessagesChange) {
       onChatMessagesChange(snapshotAiEngagement(chatMessages));
     }
   }, [chatMessages, onChatMessagesChange]);
+
+  useEffect(() => {
+    if (!onChatMessagesChange || typeof window === 'undefined' || typeof document === 'undefined') {
+      return;
+    }
+
+    const publishEngagementSnapshot = () => {
+      const currentMessages = chatMessagesRef.current;
+
+      if (!hasActiveAiEngagement(currentMessages)) {
+        return;
+      }
+
+      onChatMessagesChange(snapshotAiEngagement(currentMessages));
+    };
+
+    const intervalId = window.setInterval(publishEngagementSnapshot, 5000);
+
+    const publishOnVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') {
+        publishEngagementSnapshot();
+      }
+    };
+
+    document.addEventListener('visibilitychange', publishOnVisibilityChange);
+    window.addEventListener('beforeunload', publishEngagementSnapshot);
+
+    return () => {
+      window.clearInterval(intervalId);
+      document.removeEventListener('visibilitychange', publishOnVisibilityChange);
+      window.removeEventListener('beforeunload', publishEngagementSnapshot);
+      publishEngagementSnapshot();
+    };
+  }, [onChatMessagesChange]);
 
   const handleSendMessage = async () => {
     if (!chatInput.trim() || queriesRemaining <= 0 || isAskingAI) return;

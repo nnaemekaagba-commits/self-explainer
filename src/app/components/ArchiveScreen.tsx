@@ -1,7 +1,7 @@
 import { ArrowLeft, UserPlus, Archive, Home, BarChart3, FileText, TrendingUp, CheckCircle, XCircle, MessageCircle, Clock, Trash2, ChevronDown, ChevronUp, Users, Share2, Check } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { getActivities, Activity } from '../../services/archiveService';
-import { getAllActivityLogs, ActivityLog, clearAllActivityLogs } from '../../services/activityLogService';
+import { getAllActivityLogs, ActivityLog, ChatMessage, clearAllActivityLogs } from '../../services/activityLogService';
 import { MathRenderer } from './MathRenderer';
 import type { CoLearnerChatSession } from '../../services/colearnerChatService';
 import * as colearnerChatService from '../../services/colearnerChatService';
@@ -32,6 +32,18 @@ export const ArchiveScreen = ({ onBack, onHomeClick, onInviteClick, onStudentWor
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; log: ActivityLog } | null>(null);
   const [linkCopied, setLinkCopied] = useState(false);
   const practiceLogs = activityLogs.filter((log) => log.isPractice);
+
+  const getAiEngagementSummary = (messages: ChatMessage[] = []) => {
+    const aiMessages = messages.filter((message) => message.role === 'ai');
+
+    if (!aiMessages.length) {
+      return 'No AI response duration logged';
+    }
+
+    return aiMessages
+      .map((message, index) => `Response ${index + 1}: ${formatAiEngagementMinutes(message)}`)
+      .join('; ');
+  };
 
   const getPracticeProgress = (log: ActivityLog) => {
     if (!log.steps.length) {
@@ -64,6 +76,7 @@ export const ArchiveScreen = ({ onBack, onHomeClick, onInviteClick, onStudentWor
           StudentAnswer: attempt.userAnswer,
           StudentExplanation: attempt.userExplanation,
           SubmittedAt: attempt.timestamp,
+          AIResponseEngagementDuration: getAiEngagementSummary(attempt.chatMessages),
         }))
       )
     );
@@ -83,6 +96,7 @@ export const ArchiveScreen = ({ onBack, onHomeClick, onInviteClick, onStudentWor
             <p><strong>Answer:</strong> ${attempt.userAnswer || '-'}</p>
             <p><strong>Explanation:</strong> ${attempt.userExplanation || '-'}</p>
             <p><strong>Submitted:</strong> ${formatDateTime(attempt.timestamp)}</p>
+            <p><strong>AI response viewed/engaged duration:</strong> ${getAiEngagementSummary(attempt.chatMessages)}</p>
           </div>
         `).join('');
 
@@ -819,7 +833,7 @@ export const ArchiveScreen = ({ onBack, onHomeClick, onInviteClick, onStudentWor
                                         <div className="bg-purple-50 rounded p-2 border border-purple-200">
                                           <p className="text-[8px] font-semibold text-purple-700 mb-1 flex items-center gap-1">
                                             <MessageCircle size={10} />
-                                            AI Query Log ({attempt.chatMessages.length / 2} exchanges)
+                                            AI Query Log ({attempt.chatMessages.filter((message) => message.role === 'user').length} exchanges)
                                           </p>
                                           <div className="space-y-1.5 max-h-[150px] overflow-y-auto">
                                             {attempt.chatMessages.map((msg, msgIdx) => (
@@ -835,12 +849,12 @@ export const ArchiveScreen = ({ onBack, onHomeClick, onInviteClick, onStudentWor
                                                   <span className="font-semibold text-[8px]">
                                                     {msg.role === 'user' ? '👤 Student Query:' : '🤖 AI Response:'}
                                                   </span>
-                                                  {msg.role === 'ai' && (
-                                                    <span className="text-[8px] font-semibold text-purple-800 bg-purple-100 border border-purple-200 px-1 py-0.5 rounded">
-                                                      Viewed/engaged: {formatAiEngagementMinutes(msg)}
-                                                    </span>
-                                                  )}
                                                 </div>
+                                                {msg.role === 'ai' && (
+                                                  <div className="mb-1 rounded border border-purple-200 bg-purple-100 px-1.5 py-1 text-[8px] font-semibold text-purple-900">
+                                                    AI response viewed/engaged duration: {formatAiEngagementMinutes(msg)}
+                                                  </div>
+                                                )}
                                                 <div className="text-[9px] text-gray-800">
                                                   <MathRenderer content={msg.content} />
                                                 </div>

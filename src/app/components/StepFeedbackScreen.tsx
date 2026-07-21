@@ -3,7 +3,7 @@ import { useState, useRef, useEffect } from 'react';
 import { askAIForHelp, generateDiagram } from '../../services/aiService';
 import { MathRenderer } from './MathRenderer';
 import { RenderableMathBlock } from './RenderableMathBlock';
-import { appendUserChatMessage, createAiChatMessage, snapshotAiEngagement } from '../../utils/aiEngagement';
+import { appendUserChatMessage, createAiChatMessage, hasActiveAiEngagement, snapshotAiEngagement } from '../../utils/aiEngagement';
 
 interface ChatMessage {
   role: 'user' | 'ai';
@@ -61,6 +61,7 @@ export const StepFeedbackScreen = ({
   const [queriesRemaining, setQueriesRemaining] = useState(4);
   const [isAskingAI, setIsAskingAI] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
+  const chatMessagesRef = useRef<ChatMessage[]>([]);
   
   const allCorrect = answerCorrect && explanationCorrect;
   const allWrong = !answerCorrect && !explanationCorrect;
@@ -71,10 +72,45 @@ export const StepFeedbackScreen = ({
   }, [chatMessages]);
 
   useEffect(() => {
+    chatMessagesRef.current = chatMessages;
     if (onChatMessagesChange) {
       onChatMessagesChange(snapshotAiEngagement(chatMessages));
     }
   }, [chatMessages, onChatMessagesChange]);
+
+  useEffect(() => {
+    if (!onChatMessagesChange || typeof window === 'undefined' || typeof document === 'undefined') {
+      return;
+    }
+
+    const publishEngagementSnapshot = () => {
+      const currentMessages = chatMessagesRef.current;
+
+      if (!hasActiveAiEngagement(currentMessages)) {
+        return;
+      }
+
+      onChatMessagesChange(snapshotAiEngagement(currentMessages));
+    };
+
+    const intervalId = window.setInterval(publishEngagementSnapshot, 5000);
+
+    const publishOnVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') {
+        publishEngagementSnapshot();
+      }
+    };
+
+    document.addEventListener('visibilitychange', publishOnVisibilityChange);
+    window.addEventListener('beforeunload', publishEngagementSnapshot);
+
+    return () => {
+      window.clearInterval(intervalId);
+      document.removeEventListener('visibilitychange', publishOnVisibilityChange);
+      window.removeEventListener('beforeunload', publishEngagementSnapshot);
+      publishEngagementSnapshot();
+    };
+  }, [onChatMessagesChange]);
 
   const handleSendMessage = async () => {
     if (!chatInput.trim() || queriesRemaining <= 0 || isAskingAI) return;

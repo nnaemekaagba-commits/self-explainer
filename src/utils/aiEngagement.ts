@@ -6,6 +6,23 @@ function roundMinutes(milliseconds: number): number {
   return Math.round((milliseconds / MS_PER_MINUTE) * 100) / 100;
 }
 
+function normalizeAiEngagement<T extends ChatMessage>(message: T, now = Date.now()): T {
+  if (message.role !== 'ai') {
+    return message;
+  }
+
+  const timestamp = message.timestamp || new Date(now).toISOString();
+  const engagementStartedAt = message.engagementStartedAt || new Date(now).toISOString();
+
+  return {
+    ...message,
+    timestamp,
+    engagementStartedAt,
+    engagementMs: typeof message.engagementMs === 'number' ? message.engagementMs : 0,
+    engagementMinutes: typeof message.engagementMinutes === 'number' ? message.engagementMinutes : 0,
+  };
+}
+
 export function getAiEngagementMs(message: ChatMessage, now = Date.now()): number {
   const savedMs = typeof message.engagementMs === 'number' ? message.engagementMs : 0;
 
@@ -31,11 +48,15 @@ export function formatAiEngagementMinutes(message: ChatMessage): string {
   const fallbackMinutes = typeof message.engagementMinutes === 'number' ? message.engagementMinutes : undefined;
   const minutes = engagementMs > 0 ? roundMinutes(engagementMs) : fallbackMinutes;
 
-  return typeof minutes === 'number' ? `${minutes.toFixed(2)} min` : 'Not captured';
+  return `${(typeof minutes === 'number' ? minutes : 0).toFixed(2)} min`;
 }
 
 export function snapshotAiEngagement<T extends ChatMessage>(messages: T[], now = Date.now()): T[] {
-  return messages.map((message) => {
+  const checkpoint = new Date(now).toISOString();
+
+  return messages.map((rawMessage) => {
+    const message = normalizeAiEngagement(rawMessage, now);
+
     if (message.role !== 'ai') {
       return message;
     }
@@ -46,14 +67,21 @@ export function snapshotAiEngagement<T extends ChatMessage>(messages: T[], now =
       ...message,
       engagementMs,
       engagementMinutes: roundMinutes(engagementMs),
+      engagementStartedAt: message.engagementEndedAt ? message.engagementStartedAt : checkpoint,
     };
   });
+}
+
+export function hasActiveAiEngagement(messages: ChatMessage[]): boolean {
+  return messages.some((message) => message.role === 'ai' && !message.engagementEndedAt);
 }
 
 export function finalizeAiEngagement<T extends ChatMessage>(messages: T[], now = Date.now()): T[] {
   const endedAt = new Date(now).toISOString();
 
-  return messages.map((message) => {
+  return messages.map((rawMessage) => {
+    const message = normalizeAiEngagement(rawMessage, now);
+
     if (message.role !== 'ai') {
       return message;
     }
