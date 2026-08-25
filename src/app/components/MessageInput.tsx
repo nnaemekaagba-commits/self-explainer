@@ -3,6 +3,123 @@ import { useState, useEffect, useRef } from 'react';
 import { TinyFlippingBook } from './TinyFlippingBook';
 import { solveProblem } from '../../services/aiService';
 
+const MAX_PDF_PAGES = 50;
+const MAX_PDF_TEXT_LENGTH = 30_000;
+const MAX_SCANNED_PDF_PAGES = 4;
+const MAX_SPREADSHEET_SHEETS = 12;
+const MAX_SPREADSHEET_ROWS_PER_SHEET = 500;
+const MAX_SPREADSHEET_TEXT_LENGTH = 45_000;
+
+function isPdfFile(file: File): boolean {
+  return file.type === 'application/pdf' || /\.pdf$/i.test(file.name);
+}
+
+function isSpreadsheetFile(file: File): boolean {
+  return /\.(xlsx|xls|csv)$/i.test(file.name) || [
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'application/vnd.ms-excel',
+    'text/csv'
+  ].includes(file.type);
+}
+
+async function readSpreadsheet(fileData: ArrayBuffer): Promise<string> {
+  const XLSX = await import('xlsx');
+  const workbook = XLSX.read(fileData, { type: 'array', cellDates: true });
+  const sheetNames = workbook.SheetNames.slice(0, MAX_SPREADSHEET_SHEETS);
+  const sections: string[] = [];
+
+  for (const sheetName of sheetNames) {
+    const worksheet = workbook.Sheets[sheetName];
+    const rows = XLSX.utils.sheet_to_json<(string | number | boolean | null)[]>(worksheet, {
+      header: 1,
+      defval: '',
+      raw: false
+    });
+    const includedRows = rows.slice(0, MAX_SPREADSHEET_ROWS_PER_SHEET);
+    const columnCount = includedRows.reduce((max, row) => Math.max(max, row.length), 0);
+    const table = includedRows
+      .map((row, index) => {
+        const values = row.map((cell) => String(cell ?? '').replace(/[\r\n\t]+/g, ' ').trim());
+        return `${index + 1}\t${values.join('\t')}`;
+      })
+      .join('\n');
+
+    sections.push(
+      `--- Sheet: ${sheetName} (${rows.length} rows, ${columnCount} columns) ---\nRow\t${table}`
+    );
+
+    if (sections.join('\n\n').length >= MAX_SPREADSHEET_TEXT_LENGTH) break;
+  }
+
+  const text = sections.join('\n\n').slice(0, MAX_SPREADSHEET_TEXT_LENGTH).trim();
+  if (!text) throw new Error('No readable cells were found in this spreadsheet.');
+  return text;
+}
+
+async function readPdf(fileData: ArrayBuffer): Promise<{ text: string; firstPageImage?: string }> {
+  const pdfjs = await import('pdfjs-dist');
+  pdfjs.GlobalWorkerOptions.workerSrc = new URL(
+    'pdfjs-dist/build/pdf.worker.min.mjs',
+    import.meta.url
+  ).toString();
+
+  const pdf = await pdfjs.getDocument({ data: new Uint8Array(fileData) }).promise;
+  const pageCount = Math.min(pdf.numPages, MAX_PDF_PAGES);
+  const pages: string[] = [];
+
+  for (let pageNumber = 1; pageNumber <= pageCount; pageNumber += 1) {
+    const page = await pdf.getPage(pageNumber);
+    const content = await page.getTextContent();
+    const pageText = content.items
+      .map((item) => ('str' in item ? item.str : ''))
+      .join(' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+
+    if (pageText) pages.push(`--- Page ${pageNumber} ---\n${pageText}`);
+    if (pages.join('\n\n').length >= MAX_PDF_TEXT_LENGTH) break;
+  }
+
+  const text = pages.join('\n\n').slice(0, MAX_PDF_TEXT_LENGTH).trim();
+  if (text) return { text };
+
+  // Image-only/scanned PDF: render several pages into one image for the vision path.
+  const renderedPages: HTMLCanvasElement[] = [];
+  const scannedPageCount = Math.min(pdf.numPages, MAX_SCANNED_PDF_PAGES);
+
+  for (let pageNumber = 1; pageNumber <= scannedPageCount; pageNumber += 1) {
+    const page = await pdf.getPage(pageNumber);
+    const baseViewport = page.getViewport({ scale: 1 });
+    const scale = Math.min(1.5, 1200 / Math.max(baseViewport.width, baseViewport.height));
+    const viewport = page.getViewport({ scale });
+    const pageCanvas = document.createElement('canvas');
+    const pageContext = pageCanvas.getContext('2d');
+    if (!pageContext) throw new Error('Could not create a canvas to read the scanned PDF.');
+
+    pageCanvas.width = Math.ceil(viewport.width);
+    pageCanvas.height = Math.ceil(viewport.height);
+    await page.render({ canvas: pageCanvas, canvasContext: pageContext, viewport }).promise;
+    renderedPages.push(pageCanvas);
+  }
+
+  const canvas = document.createElement('canvas');
+  const context = canvas.getContext('2d');
+  if (!context) throw new Error('Could not create a canvas to read the scanned PDF.');
+
+  canvas.width = Math.max(...renderedPages.map((page) => page.width));
+  canvas.height = renderedPages.reduce((height, page) => height + page.height, 0);
+  context.fillStyle = '#ffffff';
+  context.fillRect(0, 0, canvas.width, canvas.height);
+
+  let y = 0;
+  renderedPages.forEach((page) => {
+    context.drawImage(page, 0, y);
+    y += page.height;
+  });
+
+  return { text: '', firstPageImage: canvas.toDataURL('image/jpeg', 0.78) };
+}
+
 // Compress image for faster upload and processing
 async function compressImage(dataUrl: string, quality: number = 0.7, maxWidth: number = 1200): Promise<string> {
   return new Promise((resolve) => {
@@ -214,9 +331,43 @@ export function MessageInput({
           return;
         }
 
-        if (file.type === 'application/pdf') {
-          setInputValue(`[PDF uploaded: ${file.name}]\n\nPlease copy and paste the math problem from your PDF below, then click Send.\n\nTip: you can also upload a screenshot as an image for faster processing.`);
-          setIsProcessing(false);
+        if (isPdfFile(file)) {
+          setProcessingStatus('Reading PDF...');
+          const { text, firstPageImage } = await readPdf(fileContent as ArrayBuffer);
+
+          if (text) {
+            setInputValue(
+              `Please answer my question using the following content extracted from ${file.name}.\n\n${text}`
+            );
+            setProcessingStatus('');
+            return;
+          }
+
+          if (firstPageImage) {
+            setUploadedImage(firstPageImage);
+            setProcessingStatus('Reading scanned PDF...');
+            const result = await solveProblem(
+              `Please read and extract the content shown on these first ${MAX_SCANNED_PDF_PAGES} scanned PDF pages exactly as clearly as possible.`,
+              firstPageImage
+            );
+            setInputValue(
+              result.extractedQuestion?.trim() ||
+              'Scanned PDF uploaded. Add any extra instructions if you want, then click Send.'
+            );
+            setProcessingStatus('');
+            return;
+          }
+
+          throw new Error('No readable text was found in this PDF.');
+        }
+
+        if (isSpreadsheetFile(file)) {
+          setProcessingStatus('Reading spreadsheet data...');
+          const spreadsheetText = await readSpreadsheet(fileContent as ArrayBuffer);
+          setInputValue(
+            `Analyze the data extracted from ${file.name}. Use the sheet names, rows, and columns below to answer my question. You may summarize the dataset, calculate values, identify trends or anomalies, and compare categories when relevant.\n\n${spreadsheetText}`
+          );
+          setProcessingStatus('');
           return;
         }
 
@@ -237,7 +388,8 @@ export function MessageInput({
         }
       } catch (err) {
         console.error('Error reading file:', err);
-        setInputValue(`Error reading file: ${file.name}. Please try typing your question instead.`);
+        const detail = err instanceof Error ? err.message : 'Unknown file-reading error';
+        setInputValue(`Error reading file: ${file.name}. ${detail}`);
       } finally {
         setIsProcessing(false);
       }
@@ -245,7 +397,7 @@ export function MessageInput({
 
     if (file.type.startsWith('image/')) {
       reader.readAsDataURL(file);
-    } else if (file.type === 'application/pdf') {
+    } else if (isPdfFile(file) || isSpreadsheetFile(file)) {
       reader.readAsArrayBuffer(file);
     } else {
       reader.readAsText(file);
@@ -302,6 +454,19 @@ export function MessageInput({
                 <input
                   type="file"
                   accept=".txt,.doc,.docx"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) handleUpload(file);
+                  }}
+                />
+              </label>
+              <label className="w-full px-4 py-2.5 flex items-center gap-3 hover:bg-gray-50 transition-colors text-left cursor-pointer">
+                <FileText size={18} className="text-green-600" />
+                <span className="text-[13px] text-gray-900">Upload Spreadsheet</span>
+                <input
+                  type="file"
+                  accept=".xlsx,.xls,.csv"
                   className="hidden"
                   onChange={(e) => {
                     const file = e.target.files?.[0];
